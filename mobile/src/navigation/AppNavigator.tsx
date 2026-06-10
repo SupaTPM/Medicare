@@ -1,5 +1,5 @@
 import React from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
@@ -144,6 +144,27 @@ function RoleTabs({ role }: { role: UserRole }) {
 }
 
 function PatientLoadingScreen() {
+  const { authError, isSyncing, logout, refreshData } = useAppState();
+
+  if (!isSyncing && authError) {
+    return (
+      <View style={{ alignItems: "center", backgroundColor: palette.background, flex: 1, gap: 12, justifyContent: "center", padding: 24 }}>
+        <Ionicons color={palette.danger} name="cloud-offline-outline" size={40} />
+        <Text style={{ color: palette.text, fontSize: 16, fontWeight: "900", textAlign: "center" }}>No se pudo cargar tu ficha</Text>
+        <Text style={{ color: palette.textMuted, fontSize: 13, fontWeight: "600", textAlign: "center" }}>{authError}</Text>
+        <Pressable
+          onPress={() => void refreshData()}
+          style={{ backgroundColor: palette.primaryStrong, borderRadius: 14, marginTop: 8, paddingHorizontal: 24, paddingVertical: 12 }}
+        >
+          <Text style={{ color: "#ffffff", fontSize: 14, fontWeight: "800" }}>Reintentar</Text>
+        </Pressable>
+        <Pressable onPress={logout} style={{ paddingVertical: 8 }}>
+          <Text style={{ color: palette.primaryStrong, fontSize: 13, fontWeight: "700" }}>Cerrar sesion</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <View style={{ alignItems: "center", backgroundColor: palette.background, flex: 1, gap: 12, justifyContent: "center" }}>
       <ActivityIndicator color={palette.primaryStrong} size="large" />

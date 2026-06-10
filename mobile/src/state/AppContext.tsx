@@ -133,17 +133,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const sessionUser = nextUser ?? user;
       const isPatientSession = sessionUser?.role === "patient";
-      const loadedUsers = isPatientSession ? [] : nextUsers ?? (await loadUsers(nextToken));
-      const loadedPatients = isPatientSession
-        ? [await loadCurrentPatient(nextToken)]
-        : await loadPatients(nextToken);
+
+      const usersPromise = isPatientSession
+        ? Promise.resolve<UserProfile[]>([])
+        : nextUsers ?? loadUsers(nextToken);
+      const patientsPromise = isPatientSession
+        ? loadCurrentPatient(nextToken).then((patient) => [patient])
+        : loadPatients(nextToken);
+
+      const [loadedUsers, loadedPatients] = await Promise.all([usersPromise, patientsPromise]);
       const loadedAppointments = await loadAppointments(nextToken, loadedUsers);
-      const loadedRecords = (
-        await Promise.all(loadedPatients.map((patient) => loadPatientRecords(nextToken, patient.id)))
-      ).flat();
-      const loadedDocuments = (
-        await Promise.all(loadedPatients.map((patient) => loadPatientDocuments(nextToken, patient.id)))
-      ).flat();
+
+      const [loadedRecords, loadedDocuments] = await Promise.all([
+        Promise.all(loadedPatients.map((patient) => loadPatientRecords(nextToken, patient.id))).then((items) => items.flat()),
+        Promise.all(loadedPatients.map((patient) => loadPatientDocuments(nextToken, patient.id))).then((items) => items.flat())
+      ]);
 
       setUsers(loadedUsers);
       setPatients(loadedPatients);

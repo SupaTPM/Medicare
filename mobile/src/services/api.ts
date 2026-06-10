@@ -23,6 +23,12 @@ type RequestOptions = RequestInit & {
   token?: string;
 };
 
+// Si el backend no responde (apagado, IP incorrecta, firewall bloqueando el
+// puerto), fetch() puede quedarse colgado indefinidamente. Forzamos un
+// timeout para que el error aparezca rapido en vez de dejar la pantalla
+// "cargando" para siempre.
+const REQUEST_TIMEOUT_MS = 10000;
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}) {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -33,13 +39,29 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}) 
     headers.Authorization = `Bearer ${options.token}`;
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      ...headers,
-      ...(options.headers as Record<string, string> | undefined)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: {
+        ...headers,
+        ...(options.headers as Record<string, string> | undefined)
+      },
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`No se pudo conectar con ${API_URL}. Verifica que el backend este encendido y accesible en la red.`);
     }
-  });
+
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     let message = `API request failed with status ${response.status}`;
