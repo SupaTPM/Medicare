@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
@@ -124,8 +125,10 @@ function TagInput({
 }
 
 export function PatientOnboardingScreen() {
+  const navigation = useNavigation<any>();
   const { authError, completePatientProfile, deviceRegistration, patients, user } = useAppState();
   const patient = patients[0] ?? null;
+  const isEditing = Boolean(patient?.profileCompleted);
 
   const [step, setStep] = useState(0);
   const [fullName, setFullName] = useState(patient?.fullName ?? deviceRegistration?.fullName ?? user?.name ?? "");
@@ -133,11 +136,13 @@ export function PatientOnboardingScreen() {
   const [email, setEmail] = useState(patient?.email ?? "");
   const [address, setAddress] = useState(patient?.address ?? "");
   const [bloodType, setBloodType] = useState(patient?.bloodType && patient.bloodType !== "No registrado" ? patient.bloodType : "");
-  const [allergies, setAllergies] = useState<string[]>([]);
-  const [chronicConditions, setChronicConditions] = useState<string[]>([]);
-  const [hasDisability, setHasDisability] = useState(false);
-  const [disabilityType, setDisabilityType] = useState("");
-  const [disabilityPercentage, setDisabilityPercentage] = useState("");
+  const [allergies, setAllergies] = useState<string[]>(patient?.allergies ?? []);
+  const [chronicConditions, setChronicConditions] = useState<string[]>(patient?.chronicConditions ?? []);
+  const [hasDisability, setHasDisability] = useState(patient?.hasDisability ?? false);
+  const [disabilityType, setDisabilityType] = useState(patient?.disabilityType ?? "");
+  const [disabilityPercentage, setDisabilityPercentage] = useState(
+    patient?.disabilityPercentage ? String(patient.disabilityPercentage) : ""
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -235,8 +240,13 @@ export function PatientOnboardingScreen() {
 
     if (!saved) {
       setError("No se pudo guardar tu registro. Intenta de nuevo.");
+      return;
     }
-    // Al guardar, el navegador cambia automaticamente al panel principal.
+
+    if (isEditing && navigation.canGoBack()) {
+      navigation.goBack();
+    }
+    // Si es el registro inicial, el navegador cambia automaticamente al panel principal.
   }
 
   const current = STEPS[step];
@@ -247,9 +257,11 @@ export function PatientOnboardingScreen() {
         <View style={styles.heroIcon}>
           <Ionicons color={palette.primaryStrong} name="clipboard-outline" size={22} />
         </View>
-        <Text style={styles.heroTitle}>Completa tu registro medico</Text>
+        <Text style={styles.heroTitle}>{isEditing ? "Edita tu informacion" : "Completa tu registro medico"}</Text>
         <Text style={styles.heroSubtitle}>
-          Necesitamos estos datos para tu ficha clinica. Solo tomara un momento.
+          {isEditing
+            ? "Actualiza tus datos de contacto y tu ficha medica cuando lo necesites."
+            : "Necesitamos estos datos para tu ficha clinica. Solo tomara un momento."}
         </Text>
       </View>
 
@@ -339,7 +351,7 @@ export function PatientOnboardingScreen() {
         ) : (
           <PrimaryButton
             icon="checkmark-done-outline"
-            label={saving ? "Guardando..." : "Finalizar registro"}
+            label={saving ? "Guardando..." : isEditing ? "Guardar cambios" : "Finalizar registro"}
             loading={saving}
             onPress={() => void handleFinish()}
             style={styles.flex}

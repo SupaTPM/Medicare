@@ -186,6 +186,7 @@ export function AppNavigator() {
           <Stack.Screen component={PatientDetailScreen} name="PatientDetail" />
           <Stack.Screen component={QRScannerScreen} name="QRScanner" />
           <Stack.Screen component={QRScreen} name="AppointmentQR" />
+          <Stack.Screen component={PatientOnboardingScreen} name="PatientProfileEdit" />
         </>
       )}
     </Stack.Navigator>
