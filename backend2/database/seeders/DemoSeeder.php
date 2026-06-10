@@ -12,33 +12,39 @@ class DemoSeeder extends Seeder
 {
     public function run(): void
     {
-        $doctor = User::create([
+        $doctor = User::updateOrCreate(['email' => 'doctor@medflow.test'], [
             'name' => 'Dr. Alejandro Solis',
-            'email' => 'doctor@medflow.test',
             'password' => 'password123',
             'role' => 'doctor',
         ]);
 
-        $reception = User::create([
+        User::updateOrCreate(['email' => 'recepcion@medflow.test'], [
             'name' => 'Camila Vera',
-            'email' => 'recepcion@medflow.test',
             'password' => 'password123',
             'role' => 'receptionist',
         ]);
 
-        $patient = Patient::create([
+        User::updateOrCreate(['email' => 'admin@medflow.test'], [
+            'name' => 'Ana Torres',
+            'password' => 'password123',
+            'role' => 'admin',
+        ]);
+
+        $patient = Patient::updateOrCreate(['cedula' => '0911122233'], [
             'full_name' => 'Maria Fernanda Lopez',
-            'cedula' => '0911122233',
             'blood_type' => 'A+',
             'phone' => '0981112233',
             'allergies' => ['Penicilina'],
         ]);
 
-        Appointment::create([
+        Appointment::updateOrCreate([
+            'patient_id' => $patient->id,
+            'reason' => 'Control cardiologico',
+        ], [
             'patient_id' => $patient->id,
             'doctor_id' => $doctor->id,
             'specialty' => 'Cardiologia',
-            'scheduled_at' => now()->addDay(),
+            'scheduled_at' => now()->addDay()->startOfMinute(),
             'reason' => 'Control cardiologico',
             'status' => AppointmentStatus::Confirmed->value,
         ]);

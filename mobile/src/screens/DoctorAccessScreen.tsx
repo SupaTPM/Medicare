@@ -35,11 +35,11 @@ export function DoctorAccessScreen() {
             value={password}
           />
           {authError ? <Text style={styles.error}>{authError}</Text> : null}
-          <PrimaryButton icon="medkit-outline" label="Entrar como doctor" onPress={() => loginDoctor(email, password)} />
+          <PrimaryButton icon="medkit-outline" label="Entrar como doctor" onPress={() => void loginDoctor(email, password)} />
         </View>
 
         <View style={styles.infoBlock}>
-          <Text style={styles.blockTitle}>Doctores demo</Text>
+          <Text style={styles.blockTitle}>Doctores cargados</Text>
           <View style={styles.chipWrap}>
             {doctorProfiles.map((item) => (
               <Pressable key={item.id} onPress={() => setEmail(item.email)} style={styles.chip}>

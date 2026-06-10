@@ -36,6 +36,21 @@ class PatientController extends Controller
         return response()->json($patient, 201);
     }
 
+    public function deviceRegistration(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'full_name' => ['required', 'string', 'max:255'],
+            'cedula' => ['required', 'string', 'max:20'],
+        ]);
+
+        $patient = Patient::updateOrCreate(
+            ['cedula' => $data['cedula']],
+            ['full_name' => $data['full_name']]
+        );
+
+        return response()->json($patient, $patient->wasRecentlyCreated ? 201 : 200);
+    }
+
     public function show(Patient $patient): JsonResponse
     {
         return response()->json($patient->load(['appointments', 'medicalRecords', 'documents']));

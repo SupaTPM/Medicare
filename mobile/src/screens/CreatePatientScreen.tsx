@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { FlowCard } from "@/components/FlowCard";
@@ -6,10 +6,41 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { SectionTitle } from "@/components/SectionTitle";
 import { TextField } from "@/components/TextField";
+import { useAppState } from "@/state/AppContext";
 import { palette } from "@/theme/palette";
 import { spacing } from "@/theme/spacing";
 
 export function CreatePatientScreen({ navigation }: any) {
+  const { authError, createPatient } = useAppState();
+  const [fullName, setFullName] = useState("");
+  const [cedula, setCedula] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [sex, setSex] = useState("");
+  const [bloodType, setBloodType] = useState("");
+  const [phone, setPhone] = useState("");
+  const [allergies, setAllergies] = useState("");
+  const [previousConditions, setPreviousConditions] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    const saved = await createPatient({
+      full_name: fullName,
+      cedula,
+      birth_date: birthDate || undefined,
+      sex: sex || undefined,
+      blood_type: bloodType || undefined,
+      phone: phone || undefined,
+      allergies: allergies ? allergies.split(",").map((item) => item.trim()).filter(Boolean) : undefined,
+      previous_conditions: previousConditions ? previousConditions.split(",").map((item) => item.trim()).filter(Boolean) : undefined
+    });
+    setSaving(false);
+
+    if (saved) {
+      navigation.navigate("Main");
+    }
+  }
+
   return (
     <Screen contentContainerStyle={{ gap: spacing.sm }}>
       <SectionTitle eyebrow="Registro" title="Nuevo paciente" />
@@ -20,18 +51,19 @@ export function CreatePatientScreen({ navigation }: any) {
         title="Ficha minima para admision segura"
         tone="green"
       />
-      <TextField defaultValue="Maria Fernanda Lopez" label="Nombres completos" />
-      <TextField defaultValue="0911122233" keyboardType="number-pad" label="Cedula" />
-      <TextField defaultValue="1992-08-12" label="Fecha de nacimiento" />
-      <TextField defaultValue="Femenino" label="Sexo" />
-      <TextField defaultValue="A+" label="Tipo de sangre" />
-      <TextField defaultValue="0981112233" keyboardType="phone-pad" label="Telefono" />
-      <TextField defaultValue="Penicilina" label="Alergias" />
-      <TextField defaultValue="Hipertension" label="Enfermedades previas" />
+      <TextField label="Nombres completos" onChangeText={setFullName} value={fullName} />
+      <TextField keyboardType="number-pad" label="Cedula" onChangeText={setCedula} value={cedula} />
+      <TextField label="Fecha de nacimiento" onChangeText={setBirthDate} placeholder="1992-08-12" value={birthDate} />
+      <TextField label="Sexo" onChangeText={setSex} value={sex} />
+      <TextField label="Tipo de sangre" onChangeText={setBloodType} value={bloodType} />
+      <TextField keyboardType="phone-pad" label="Telefono" onChangeText={setPhone} value={phone} />
+      <TextField label="Alergias" onChangeText={setAllergies} placeholder="Separadas por coma" value={allergies} />
+      <TextField label="Enfermedades previas" onChangeText={setPreviousConditions} placeholder="Separadas por coma" value={previousConditions} />
+      {authError ? <Text style={styles.error}>{authError}</Text> : null}
       <View style={styles.notice}>
         <Text style={styles.noticeText}>La validacion por cedula debe usar fuente autorizada y consentimiento.</Text>
       </View>
-      <PrimaryButton icon="save-outline" label="Guardar paciente" onPress={() => navigation.navigate("Main")} />
+      <PrimaryButton icon="save-outline" label={saving ? "Guardando..." : "Guardar paciente real"} onPress={() => void handleSave()} />
     </Screen>
   );
 }
@@ -44,6 +76,11 @@ const styles = StyleSheet.create({
   },
   noticeText: {
     color: "#8a5a00",
+    fontSize: 13,
+    fontWeight: "700"
+  },
+  error: {
+    color: palette.danger,
     fontSize: 13,
     fontWeight: "700"
   }
