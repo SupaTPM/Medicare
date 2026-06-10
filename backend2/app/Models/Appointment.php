@@ -14,6 +14,7 @@ class Appointment extends Model
     protected $fillable = [
         'patient_id',
         'doctor_id',
+        'availability_slot_id',
         'specialty',
         'scheduled_at',
         'reason',
@@ -28,6 +29,16 @@ class Appointment extends Model
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
+    }
+
+    public function availabilitySlot(): BelongsTo
+    {
+        return $this->belongsTo(DoctorAvailabilitySlot::class, 'availability_slot_id');
+    }
+
+    public function doctor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'doctor_id');
     }
 
     public function medicalRecord(): HasOne

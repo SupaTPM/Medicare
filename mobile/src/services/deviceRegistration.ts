@@ -61,7 +61,7 @@ export async function createDeviceRegistration(cedula: string, fullName: string)
 
 export async function syncDeviceRegistration(registration: DevicePatientRegistration) {
   try {
-    const response = await apiRequest<{ id?: string; data?: { id?: string } }>("/patients/device-registration", {
+    const response = await apiRequest<{ patient?: { id?: string | number }; id?: string; data?: { id?: string } }>("/patients/device-registration", {
       method: "POST",
       body: JSON.stringify({
         cedula: registration.cedula,
@@ -74,7 +74,10 @@ export async function syncDeviceRegistration(registration: DevicePatientRegistra
       ...registration,
       syncStatus: "synced",
       lastSyncAttemptAt: nowIso(),
-      remoteId: response.data?.id ?? response.id ?? registration.remoteId
+      remoteId:
+        response.patient?.id !== undefined
+          ? String(response.patient.id)
+          : response.data?.id ?? response.id ?? registration.remoteId
     };
 
     await saveDeviceRegistration(syncedRegistration);

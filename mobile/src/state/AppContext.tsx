@@ -1,20 +1,29 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 import {
+  loadCurrentPatient,
   createAppointmentRequest,
+  createPublicAppointmentRequest,
   CreateAppointmentPayload,
   createMedicalRecordRequest,
   CreateMedicalRecordPayload,
   createPatientRequest,
   CreatePatientPayload,
+  loginWithCedulaRequest,
+  loadDoctorAvailability,
   buildAlerts,
   loadAppointments,
+  loadScheduleDoctors,
+  loadScheduleSpecialties,
   loadPatientDocuments,
   loadPatientRecords,
   loadPatients,
+  registerDevicePatientRequest,
+  searchPatients as searchPatientsRequest,
   loadUsers,
   loginRequest
 } from "@/services/medicalApi";
+import { clearAuthSession, loadAuthSession, saveAuthSession } from "@/services/authSession";
 import {
   createDeviceRegistration,
   loadDeviceRegistration,
@@ -25,7 +34,9 @@ import {
 import {
   AlertItem,
   Appointment,
+  AvailabilitySlot,
   DevicePatientRegistration,
+  DoctorOption,
   MedicalDocument,
   MedicalRecord,
   Patient,
@@ -49,14 +60,18 @@ type AppState = {
   createAppointment: (payload: CreateAppointmentPayload) => Promise<boolean>;
   createMedicalRecord: (payload: CreateMedicalRecordPayload) => Promise<boolean>;
   createPatient: (payload: CreatePatientPayload) => Promise<boolean>;
+  getAvailableSlots: (doctorId: string) => Promise<AvailabilitySlot[]>;
+  getDoctorsBySpecialty: (specialty: string) => Promise<DoctorOption[]>;
+  getSpecialties: () => Promise<string[]>;
   login: (email: string, password: string) => Promise<boolean>;
   loginDoctor: (email: string, password: string) => Promise<boolean>;
-  loginWithCedula: (cedula: string) => boolean;
+  loginWithCedula: (cedula: string) => Promise<boolean>;
   loginAsRole: (role: UserRole) => void;
   logout: () => void;
   refreshData: () => Promise<void>;
   registerDevicePatient: (cedula: string, fullName: string) => Promise<boolean>;
   retryDeviceSync: () => Promise<void>;
+  searchPatients: (query: string) => Promise<Patient[]>;
 };
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -80,10 +95,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let active = true;
 
-    loadDeviceRegistration()
-      .then((registration) => {
+    Promise.all([loadDeviceRegistration(), loadAuthSession()])
+      .then(async ([registration, session]) => {
         if (active) {
           setDeviceRegistration(registration);
+        }
+
+        if (active && session?.token) {
+          try {
+            setToken(session.token);
+            setUser(session.user);
+            await refreshDataWithToken(session.token, undefined, session.user);
+          } catch {
+            setToken(null);
+            setUser(null);
+            await clearAuthSession();
+          }
         }
       })
       .finally(() => {
@@ -97,12 +124,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  async function refreshDataWithToken(nextToken: string, nextUsers?: UserProfile[]) {
+  async function refreshDataWithToken(nextToken: string, nextUsers?: UserProfile[], nextUser?: UserProfile | null) {
     setIsSyncing(true);
 
     try {
-      const loadedUsers = nextUsers ?? (await loadUsers(nextToken));
-      const loadedPatients = await loadPatients(nextToken);
+      const sessionUser = nextUser ?? user;
+      const isPatientSession = sessionUser?.role === "patient";
+      const loadedUsers = isPatientSession ? [] : nextUsers ?? (await loadUsers(nextToken));
+      const loadedPatients = isPatientSession
+        ? [await loadCurrentPatient(nextToken)]
+        : await loadPatients(nextToken);
       const loadedAppointments = await loadAppointments(nextToken, loadedUsers);
       const loadedRecords = (
         await Promise.all(loadedPatients.map((patient) => loadPatientRecords(nextToken, patient.id)))
@@ -136,7 +167,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const response = await loginRequest(email.trim(), password);
       setToken(response.token);
       setUser(response.user);
-      await refreshDataWithToken(response.token);
+      await saveAuthSession({ token: response.token, user: response.user });
+      await refreshDataWithToken(response.token, undefined, response.user);
       return true;
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "No se pudo iniciar sesion.");
@@ -155,25 +187,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return true;
   }
 
-  function loginWithCedula(cedula: string) {
+  async function loginWithCedula(cedula: string) {
     const normalizedCedula = normalizeCedula(cedula);
-    const patient = patients.find((item) => item.cedula === normalizedCedula);
 
-    if (!patient && (!deviceRegistration || normalizedCedula !== deviceRegistration.cedula)) {
-      setAuthError("Cedula no encontrada en registros reales.");
+    if (normalizedCedula.length !== 10) {
+      setAuthError("Cedula invalida. Debe tener 10 digitos.");
       return false;
     }
 
-    const displayName = patient?.fullName ?? deviceRegistration?.fullName ?? "Paciente";
-    setAuthError(null);
-    setUser({
-      id: patient?.id ?? deviceRegistration?.id ?? normalizedCedula,
-      name: displayName,
-      email: `${normalizedCedula}@local.medflow`,
-      role: "patient",
-      subtitle: "Paciente"
-    });
-    return true;
+    try {
+      setIsSyncing(true);
+      setAuthError(null);
+      const response = await loginWithCedulaRequest(normalizedCedula);
+      setToken(response.token);
+      setUser(response.user);
+      await saveAuthSession({ token: response.token, user: response.user });
+
+      if (response.patient) {
+        const responsePatient = response.patient;
+        setDeviceRegistration((current) => {
+          const nextRegistration = {
+            id: current?.id ?? `device-${normalizedCedula}`,
+            cedula: normalizedCedula,
+            fullName: responsePatient.fullName ?? current?.fullName ?? "Paciente",
+            createdAt: current?.createdAt ?? new Date().toISOString(),
+            syncStatus: "synced" as const,
+            lastSyncAttemptAt: new Date().toISOString(),
+            remoteId: responsePatient.id
+          };
+
+          void saveDeviceRegistration(nextRegistration);
+          return nextRegistration;
+        });
+      }
+
+      await refreshDataWithToken(response.token, undefined, response.user);
+      return true;
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Paciente no encontrado.");
+      setIsSyncing(false);
+      return false;
+    }
   }
 
   function loginAsRole(role: UserRole) {
@@ -203,42 +257,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     const registration = await createDeviceRegistration(normalizedCedula, trimmedName);
+    setDeviceRegistration(registration);
     const syncedRegistration = await syncDeviceRegistration(registration);
     setDeviceRegistration(syncedRegistration);
 
-    const remoteId = syncedRegistration.remoteId;
+    try {
+      setIsSyncing(true);
+      const response = await registerDevicePatientRequest(normalizedCedula, trimmedName);
+      const remotePatient = response.patient;
+      const nextRegistration = {
+        ...syncedRegistration,
+        syncStatus: "synced" as const,
+        lastSyncAttemptAt: new Date().toISOString(),
+        remoteId: remotePatient?.id ?? syncedRegistration.remoteId
+      };
 
-    if (remoteId) {
-      setPatients((currentPatients) => {
-        if (currentPatients.some((patient) => patient.id === remoteId)) {
-          return currentPatients;
-        }
-
-        return [
-          {
-            id: remoteId,
-            fullName: syncedRegistration.fullName,
-            cedula: syncedRegistration.cedula,
-            age: 0,
-            bloodType: "No registrado",
-            allergies: ["Sin alergias registradas"],
-            phone: "No registrado",
-            lastVisit: new Date().toLocaleDateString("es-EC")
-          },
-          ...currentPatients
-        ];
-      });
+      setDeviceRegistration(nextRegistration);
+      await saveDeviceRegistration(nextRegistration);
+      setToken(response.token);
+      setUser(response.user);
+      await saveAuthSession({ token: response.token, user: response.user });
+      await refreshDataWithToken(response.token, undefined, response.user);
+      setAuthError(null);
+      return true;
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "No se pudo registrar el paciente.");
+      setIsSyncing(false);
+      return false;
     }
-
-    setAuthError(null);
-    setUser({
-      id: syncedRegistration.remoteId ?? syncedRegistration.id,
-      name: syncedRegistration.fullName,
-      email: `${syncedRegistration.cedula}@local.medflow`,
-      role: "patient",
-      subtitle: "Paciente registrado"
-    });
-    return syncedRegistration.syncStatus === "synced";
   }
 
   async function retryDeviceSync() {
@@ -253,6 +299,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setDeviceRegistration(syncedRegistration);
     await saveDeviceRegistration(syncedRegistration);
+  }
+
+  async function searchPatients(query: string) {
+    if (!token) {
+      setAuthError("Sin token, vuelve a iniciar sesion.");
+      return [];
+    }
+
+    try {
+      const results = await searchPatientsRequest(token, query);
+      setAuthError(null);
+      return results;
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "No se pudo buscar pacientes.");
+      return [];
+    }
   }
 
   async function createPatient(payload: CreatePatientPayload) {
@@ -272,14 +334,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function createAppointment(payload: CreateAppointmentPayload) {
-    if (!token) {
-      setAuthError("Inicia sesion para crear citas reales.");
-      return false;
-    }
+  async function getSpecialties() {
+    return loadScheduleSpecialties(token ?? "");
+  }
 
+  async function getDoctorsBySpecialty(specialty: string) {
+    return loadScheduleDoctors(token ?? "", specialty);
+  }
+
+  async function getAvailableSlots(doctorId: string) {
+    return loadDoctorAvailability(token ?? "", doctorId);
+  }
+
+  async function createAppointment(payload: CreateAppointmentPayload) {
     try {
-      const createdAppointment = await createAppointmentRequest(token, payload, users);
+      const createdAppointment = token
+        ? await createAppointmentRequest(token, payload, users)
+        : await createPublicAppointmentRequest(payload, users);
       setAppointments((currentAppointments) => [createdAppointment, ...currentAppointments]);
       setAuthError(null);
       return true;
@@ -316,6 +387,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAppointments([]);
     setMedicalRecords([]);
     setDocuments([]);
+    void clearAuthSession();
   }
 
   const value = useMemo<AppState>(
@@ -335,6 +407,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createAppointment,
       createMedicalRecord,
       createPatient,
+      getAvailableSlots,
+      getDoctorsBySpecialty,
+      getSpecialties,
       login,
       loginDoctor,
       loginWithCedula,
@@ -342,7 +417,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       logout,
       refreshData,
       registerDevicePatient,
-      retryDeviceSync
+      retryDeviceSync,
+      searchPatients
     }),
     [alerts, appointments, authError, deviceRegistration, documents, doctorProfiles, isReady, isSyncing, medicalRecords, patients, users, user, token]
   );

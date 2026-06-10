@@ -3,6 +3,8 @@ import {
   AlertItem,
   Appointment,
   AppointmentStatus,
+  AvailabilitySlot,
+  DoctorOption,
   MedicalDocument,
   MedicalRecord,
   Patient,
@@ -19,6 +21,11 @@ type ApiUser = {
   name: string;
   email: string;
   role: UserRole;
+  doctor_profile?: {
+    specialty: string;
+    license_code?: string | null;
+    phone?: string | null;
+  } | null;
 };
 
 type ApiPatient = {
@@ -42,8 +49,18 @@ type ApiAppointment = {
   reason: string;
   observations?: string | null;
   status: AppointmentStatus;
+  availability_slot_id?: number | null;
   patient?: ApiPatient;
+  doctor?: ApiUser;
   qr_token?: { token: string } | null;
+};
+
+type ApiAvailabilitySlot = {
+  id: number;
+  doctor_id: number;
+  starts_at: string;
+  ends_at: string;
+  status: AvailabilitySlot["status"];
 };
 
 type ApiMedicalRecord = {
@@ -68,6 +85,12 @@ type ApiMedicalDocument = {
   uploaded_by?: number;
 };
 
+type ApiAuthSession = {
+  token: string;
+  user: ApiUser;
+  patient?: ApiPatient;
+};
+
 export type LoginResponse = {
   token: string;
   user: ApiUser;
@@ -87,8 +110,9 @@ export type CreatePatientPayload = {
 export type CreateAppointmentPayload = {
   patient_id: number;
   doctor_id?: number;
+  availability_slot_id?: number;
   specialty: string;
-  scheduled_at: string;
+  scheduled_at?: string;
   reason: string;
   status?: AppointmentStatus;
 };
@@ -154,7 +178,30 @@ export function mapUser(user: ApiUser): UserProfile {
     name: user.name,
     email: user.email,
     role: user.role,
-    subtitle: user.role
+    subtitle: user.doctor_profile?.specialty ?? user.role,
+    specialty: user.doctor_profile?.specialty
+  };
+}
+
+function mapDoctor(user: ApiUser): DoctorOption {
+  return {
+    ...mapUser(user),
+    specialty: user.doctor_profile?.specialty ?? "Sin especialidad"
+  };
+}
+
+function mapAvailabilitySlot(slot: ApiAvailabilitySlot): AvailabilitySlot {
+  const dateLabel = formatDate(slot.starts_at);
+  const startTime = formatTime(slot.starts_at);
+  const endTime = formatTime(slot.ends_at);
+
+  return {
+    id: String(slot.id),
+    doctorId: String(slot.doctor_id),
+    startsAt: slot.starts_at,
+    endsAt: slot.ends_at,
+    status: slot.status,
+    label: `${dateLabel} · ${startTime} - ${endTime}`
   };
 }
 
@@ -173,7 +220,7 @@ export function mapPatient(patient: ApiPatient): Patient {
 }
 
 export function mapAppointment(appointment: ApiAppointment, users: UserProfile[] = []): Appointment {
-  const doctor = users.find((item) => item.id === String(appointment.doctor_id));
+  const doctor = users.find((item) => item.id === String(appointment.doctor_id)) ?? (appointment.doctor ? mapUser(appointment.doctor) : null);
 
   return {
     id: String(appointment.id),
@@ -230,14 +277,70 @@ export async function loginRequest(email: string, password: string) {
   };
 }
 
+export async function registerDevicePatientRequest(cedula: string, fullName: string) {
+  const response = await apiRequest<ApiAuthSession>("/patients/device-registration", {
+    method: "POST",
+    body: JSON.stringify({ cedula, full_name: fullName, source: "mobile_device" })
+  });
+
+  return {
+    token: response.token,
+    user: mapUser(response.user),
+    patient: response.patient ? mapPatient(response.patient) : null
+  };
+}
+
+export async function loginWithCedulaRequest(cedula: string) {
+  const response = await apiRequest<ApiAuthSession>("/patients/cedula-login", {
+    method: "POST",
+    body: JSON.stringify({ cedula })
+  });
+
+  return {
+    token: response.token,
+    user: mapUser(response.user),
+    patient: response.patient ? mapPatient(response.patient) : null
+  };
+}
+
+export async function loadCurrentPatient(token: string) {
+  const patient = await apiRequest<ApiPatient>("/me/patient", { token });
+  return mapPatient(patient);
+}
+
 export async function loadUsers(token: string) {
   const users = await apiRequest<ApiUser[]>("/users", { token });
   return users.map(mapUser);
 }
 
+export async function loadScheduleSpecialties(token: string) {
+  return apiRequest<string[]>("/schedule/specialties", token ? { token } : {});
+}
+
+export async function loadScheduleDoctors(token: string, specialty: string) {
+  const doctors = await apiRequest<ApiUser[]>(
+    `/schedule/doctors?specialty=${encodeURIComponent(specialty)}`,
+    token ? { token } : {}
+  );
+  return doctors.map(mapDoctor);
+}
+
+export async function loadDoctorAvailability(token: string, doctorId: string) {
+  const slots = await apiRequest<ApiAvailabilitySlot[]>(
+    `/schedule/doctors/${doctorId}/availability`,
+    token ? { token } : {}
+  );
+  return slots.map(mapAvailabilitySlot);
+}
+
 export async function loadPatients(token: string) {
   const response = await apiRequest<Paginated<ApiPatient>>("/patients", { token });
   return response.data.map(mapPatient);
+}
+
+export async function searchPatients(token: string, query: string) {
+  const patients = await apiRequest<ApiPatient[]>(`/patients/search?query=${encodeURIComponent(query)}`, { token });
+  return patients.map(mapPatient);
 }
 
 export async function loadAppointments(token: string, users: UserProfile[]) {
@@ -275,6 +378,15 @@ export async function createAppointmentRequest(token: string, payload: CreateApp
   await apiRequest(`/appointments/${appointment.id}/generate-qr`, {
     method: "POST",
     token
+  });
+
+  return mapAppointment(appointment, users);
+}
+
+export async function createPublicAppointmentRequest(payload: CreateAppointmentPayload, users: UserProfile[]) {
+  const appointment = await apiRequest<ApiAppointment>("/appointments/public", {
+    method: "POST",
+    body: JSON.stringify(payload)
   });
 
   return mapAppointment(appointment, users);

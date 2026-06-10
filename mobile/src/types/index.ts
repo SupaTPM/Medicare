@@ -18,6 +18,20 @@ export type UserProfile = {
   email: string;
   role: UserRole;
   subtitle: string;
+  specialty?: string;
+};
+
+export type DoctorOption = UserProfile & {
+  specialty: string;
+};
+
+export type AvailabilitySlot = {
+  id: string;
+  doctorId: string;
+  startsAt: string;
+  endsAt: string;
+  status: "available" | "booked" | "completed" | "cancelled";
+  label: string;
 };
 
 export type DevicePatientRegistration = {

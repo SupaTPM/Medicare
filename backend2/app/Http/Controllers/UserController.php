@@ -12,6 +12,7 @@ class UserController extends Controller
         return response()->json(
             User::query()
                 ->select(['id', 'name', 'email', 'role', 'created_at', 'updated_at'])
+                ->with('doctorProfile')
                 ->orderBy('name')
                 ->get()
         );

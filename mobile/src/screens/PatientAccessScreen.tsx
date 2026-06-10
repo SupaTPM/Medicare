@@ -10,7 +10,7 @@ import { softShadow } from "@/theme/shadows";
 import { spacing } from "@/theme/spacing";
 
 export function PatientAccessScreen() {
-  const { authError, deviceRegistration, isReady, loginWithCedula, registerDevicePatient, retryDeviceSync } = useAppState();
+  const { authError, deviceRegistration, isReady, isSyncing, loginWithCedula, registerDevicePatient, retryDeviceSync, user } = useAppState();
   const [cedula, setCedula] = useState(deviceRegistration?.cedula ?? "");
   const [fullName, setFullName] = useState(deviceRegistration?.fullName ?? "");
 
@@ -58,6 +58,7 @@ export function PatientAccessScreen() {
             />
           ) : null}
           {authError ? <Text style={styles.error}>{authError}</Text> : null}
+          {user?.role === "patient" ? <Text style={styles.success}>Paciente autenticado.</Text> : null}
           {deviceRegistration ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>
@@ -67,14 +68,14 @@ export function PatientAccessScreen() {
           ) : null}
           <PrimaryButton
             icon={isFirstAccess ? "person-add-outline" : "log-in-outline"}
-            label={isFirstAccess ? "Registrar en celular" : "Entrar con cedula"}
+            label={isSyncing ? "Validando..." : isFirstAccess ? "Registrar en celular" : "Entrar con cedula"}
             onPress={() => {
               if (isFirstAccess) {
                 void registerDevicePatient(cedula, fullName);
                 return;
               }
 
-              loginWithCedula(cedula);
+              void loginWithCedula(cedula);
             }}
           />
           {deviceRegistration && deviceRegistration.syncStatus !== "synced" ? (
@@ -132,6 +133,11 @@ const styles = StyleSheet.create({
   },
   error: {
     color: palette.danger,
+    fontSize: 13,
+    fontWeight: "700"
+  },
+  success: {
+    color: palette.secondary,
     fontSize: 13,
     fontWeight: "700"
   },

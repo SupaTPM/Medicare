@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AppointmentStatus;
+use App\Enums\UserRole;
 use App\Models\MedicalRecord;
 use App\Models\Patient;
 use Illuminate\Http\JsonResponse;
@@ -10,8 +11,14 @@ use Illuminate\Http\Request;
 
 class MedicalRecordController extends Controller
 {
-    public function index(Patient $patient): JsonResponse
+    public function index(Request $request, Patient $patient): JsonResponse
     {
+        $user = $request->user();
+
+        if ($user?->role === UserRole::Patient->value) {
+            abort_unless($user->patient?->is($patient), 403, 'No puedes ver historiales de otro paciente.');
+        }
+
         return response()->json($patient->medicalRecords()->latest()->get());
     }
 

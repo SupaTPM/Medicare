@@ -2,15 +2,26 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Models\Patient;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class PatientController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        return response()->json(Patient::latest()->paginate(20));
+        $user = $request->user();
+        $query = Patient::query()->latest();
+
+        if ($user?->role === UserRole::Patient->value) {
+            $query->where('user_id', $user->id);
+        }
+
+        return response()->json($query->paginate(20));
     }
 
     public function store(Request $request): JsonResponse
@@ -33,6 +44,11 @@ class PatientController extends Controller
 
         $patient = Patient::create($data);
 
+        if (! empty($data['cedula'])) {
+            $user = $this->upsertPatientUser($data['cedula'], $data['full_name']);
+            $patient->update(['user_id' => $user->id]);
+        }
+
         return response()->json($patient, 201);
     }
 
@@ -43,21 +59,73 @@ class PatientController extends Controller
             'cedula' => ['required', 'string', 'max:20'],
         ]);
 
-        $patient = Patient::updateOrCreate(
-            ['cedula' => $data['cedula']],
-            ['full_name' => $data['full_name']]
-        );
+        $user = $this->upsertPatientUser($data['cedula'], $data['full_name']);
+        $patient = $this->upsertPatient($data['cedula'], $data['full_name'], $user->id);
 
-        return response()->json($patient, $patient->wasRecentlyCreated ? 201 : 200);
+        return response()->json([
+            'token' => $user->createToken('patient-mobile')->plainTextToken,
+            'user' => $user->load('patient'),
+            'patient' => $patient,
+        ], $patient->wasRecentlyCreated ? 201 : 200);
+    }
+
+    public function cedulaLogin(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'cedula' => ['required', 'string', 'max:20'],
+        ]);
+
+        $patient = Patient::query()->where('cedula', $data['cedula'])->first();
+
+        if (! $patient) {
+            return response()->json([
+                'message' => 'Paciente no encontrado para esa cédula.',
+            ], 404);
+        }
+
+        $name = $patient->full_name ?: 'Paciente';
+        $user = $patient->user;
+
+        if (! $user) {
+            $user = $this->upsertPatientUser($patient->cedula, $name);
+            $patient->update(['user_id' => $user->id]);
+            $patient->refresh();
+        } else {
+            $user->forceFill(['name' => $name])->save();
+        }
+
+        return response()->json([
+            'token' => $user->createToken('patient-mobile')->plainTextToken,
+            'user' => $user->load('patient'),
+            'patient' => $patient,
+        ]);
+    }
+
+    public function me(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $patient = $user?->patient;
+
+        if (! $patient) {
+            return response()->json([
+                'message' => 'El usuario autenticado no tiene paciente vinculado.',
+            ], 404);
+        }
+
+        return response()->json($patient);
     }
 
     public function show(Patient $patient): JsonResponse
     {
+        $this->authorizePatientAccess(request()->user(), $patient);
+
         return response()->json($patient->load(['appointments', 'medicalRecords', 'documents']));
     }
 
     public function update(Request $request, Patient $patient): JsonResponse
     {
+        $this->authorizePatientAccess($request->user(), $patient);
+
         $data = $request->validate([
             'full_name' => ['sometimes', 'string', 'max:255'],
             'cedula' => ['sometimes', 'string', 'max:20', 'unique:patients,cedula,' . $patient->id],
@@ -76,11 +144,22 @@ class PatientController extends Controller
 
         $patient->update($data);
 
+        if (array_key_exists('cedula', $data) || array_key_exists('full_name', $data)) {
+            $user = $this->upsertPatientUser($patient->cedula, $patient->full_name);
+            $patient->update(['user_id' => $user->id]);
+        }
+
         return response()->json($patient->refresh());
     }
 
     public function search(Request $request): JsonResponse
     {
+        abort_unless(
+            in_array($request->user()?->role, [UserRole::Admin->value, UserRole::Receptionist->value, UserRole::Doctor->value], true),
+            403,
+            'No tienes permisos para buscar pacientes.'
+        );
+
         $query = (string) $request->query('query', '');
 
         $patients = Patient::query()
@@ -91,5 +170,46 @@ class PatientController extends Controller
             ->get();
 
         return response()->json($patients);
+    }
+
+    private function upsertPatient(string $cedula, string $fullName, int $userId): Patient
+    {
+        return Patient::updateOrCreate(
+            ['cedula' => $cedula],
+            [
+                'full_name' => $fullName,
+                'user_id' => $userId,
+            ]
+        );
+    }
+
+    private function upsertPatientUser(string $cedula, string $fullName): User
+    {
+        $email = sprintf('%s@patients.medflow.local', $cedula);
+
+        return User::updateOrCreate(
+            ['email' => $email],
+            [
+                'name' => $fullName,
+                'password' => Hash::make(Str::password(24)),
+                'role' => UserRole::Patient->value,
+            ]
+        );
+    }
+
+    private function authorizePatientAccess(?User $user, Patient $patient): void
+    {
+        abort_unless($user, 401, 'No autenticado.');
+
+        if ($user->role === UserRole::Patient->value) {
+            abort_unless($user->patient?->is($patient), 403, 'No puedes acceder a otro paciente.');
+            return;
+        }
+
+        abort_unless(
+            in_array($user->role, [UserRole::Admin->value, UserRole::Receptionist->value, UserRole::Doctor->value], true),
+            403,
+            'No tienes permisos para acceder a este paciente.'
+        );
     }
 }

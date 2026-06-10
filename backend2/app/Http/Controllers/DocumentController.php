@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Models\MedicalDocument;
 use App\Models\Patient;
 use Illuminate\Http\JsonResponse;
@@ -9,8 +10,14 @@ use Illuminate\Http\Request;
 
 class DocumentController extends Controller
 {
-    public function index(Patient $patient): JsonResponse
+    public function index(Request $request, Patient $patient): JsonResponse
     {
+        $user = $request->user();
+
+        if ($user?->role === UserRole::Patient->value) {
+            abort_unless($user->patient?->is($patient), 403, 'No puedes ver documentos de otro paciente.');
+        }
+
         return response()->json($patient->documents()->latest('uploaded_at')->get());
     }
 
