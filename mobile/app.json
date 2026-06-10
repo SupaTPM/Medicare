@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "MedFlow",
+    "slug": "medflow",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "android": {
+      "package": "com.medflow.app"
+    },
+    "ios": {
+      "bundleIdentifier": "com.medflow.app"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow MedFlow to scan appointment QR codes."
+        }
+      ]
+    ]
+  }
+}

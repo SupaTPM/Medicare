@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+expo-web*.log
+expo-web*.err.log
+
+# Build output and caches
+dist/
+build/
+coverage/
+.cache/
+.parcel-cache/
+.turbo/
+.vite/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+web-build/
+android/
+ios/
+
+# Laravel
+bootstrap/cache/*.php
+storage/*.key
+storage/app/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/testing/*
+storage/framework/views/*
+storage/logs/*
+
+# Keep Laravel placeholder files
+!storage/app/.gitignore
+!storage/framework/cache/.gitignore
+!storage/framework/sessions/.gitignore
+!storage/framework/testing/.gitignore
+!storage/framework/views/.gitignore
+!storage/logs/.gitignore
+
+# Supabase local state
+supabase/.temp/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+*.tmp
+*.temp
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/

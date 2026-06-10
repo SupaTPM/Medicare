@@ -1,0 +1,11 @@
+<?php
+
+namespace App\Enums;
+
+enum UserRole: string
+{
+    case Patient = 'patient';
+    case Doctor = 'doctor';
+    case Receptionist = 'receptionist';
+    case Admin = 'admin';
+}

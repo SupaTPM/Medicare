@@ -1,0 +1,39 @@
+<?php
+
+use App\Http\Controllers\AIController;
+use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\MedicalRecordController;
+use App\Http\Controllers\PatientController;
+use Illuminate\Support\Facades\Route;
+
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/profile', [AuthController::class, 'profile']);
+
+    Route::get('/patients', [PatientController::class, 'index']);
+    Route::post('/patients', [PatientController::class, 'store']);
+    Route::get('/patients/search', [PatientController::class, 'search']);
+    Route::get('/patients/{patient}', [PatientController::class, 'show']);
+    Route::put('/patients/{patient}', [PatientController::class, 'update']);
+    Route::get('/patients/{patient}/medical-records', [MedicalRecordController::class, 'index']);
+    Route::get('/patients/{patient}/documents', [DocumentController::class, 'index']);
+
+    Route::get('/appointments', [AppointmentController::class, 'index']);
+    Route::post('/appointments', [AppointmentController::class, 'store']);
+    Route::get('/appointments/{appointment}', [AppointmentController::class, 'show']);
+    Route::put('/appointments/{appointment}', [AppointmentController::class, 'update']);
+    Route::put('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus']);
+    Route::post('/appointments/{appointment}/generate-qr', [AppointmentController::class, 'generateQr']);
+    Route::post('/appointments/scan-qr', [AppointmentController::class, 'scanQr']);
+
+    Route::post('/medical-records', [MedicalRecordController::class, 'store']);
+    Route::post('/documents', [DocumentController::class, 'store']);
+
+    Route::post('/ai/summarize-record', [AIController::class, 'summarizeRecord']);
+    Route::post('/ai/check-missing-fields', [AIController::class, 'checkMissingFields']);
+});
