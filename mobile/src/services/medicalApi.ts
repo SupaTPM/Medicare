@@ -24,6 +24,7 @@ type ApiUser = {
   role: UserRole;
   profile_completed?: boolean;
   doctor_profile?: {
+    cedula?: string | null;
     specialty: string;
     license_code?: string | null;
     phone?: string | null;
@@ -170,6 +171,7 @@ export type CreateMedicalRecordPayload = {
 };
 
 export type UpdateDoctorProfilePayload = {
+  cedula: string;
   specialty: string;
   license_code: string;
   phone: string;
@@ -268,6 +270,7 @@ export function mapUser(user: ApiUser): UserProfile {
     email: user.email,
     role: user.role,
     subtitle: user.doctor_profile?.specialty ?? user.role,
+    cedula: user.doctor_profile?.cedula ?? undefined,
     specialty: user.doctor_profile?.specialty,
     profilePhotoUrl: normalizeMediaUrl(user.doctor_profile?.profile_photo_url),
     licenseCode: user.doctor_profile?.license_code ?? undefined,
@@ -284,6 +287,7 @@ function mapDoctor(user: ApiUser): DoctorOption {
   return {
     ...mapUser(user),
     specialty: user.doctor_profile?.specialty ?? "Sin especialidad",
+    cedula: user.doctor_profile?.cedula ?? undefined,
     licenseCode: user.doctor_profile?.license_code ?? undefined,
     phone: user.doctor_profile?.phone ?? undefined,
     bio: user.doctor_profile?.bio ?? undefined,
@@ -390,10 +394,10 @@ function mapNotification(notification: ApiNotification): AppNotification {
   };
 }
 
-export async function loginRequest(email: string, password: string) {
+export async function loginRequest(identifier: string, password: string) {
   const response = await apiRequest<LoginResponse>("/login", {
     method: "POST",
-    body: JSON.stringify({ email, password })
+    body: JSON.stringify({ identifier, password })
   });
 
   return {
@@ -494,6 +498,7 @@ export async function loadDoctorProfile(token: string, doctorId: string) {
 export async function updateDoctorProfileRequest(token: string, doctorId: string, payload: UpdateDoctorProfilePayload) {
   const formData = new FormData();
 
+  formData.append("cedula", payload.cedula);
   formData.append("specialty", payload.specialty);
   formData.append("license_code", payload.license_code);
   formData.append("phone", payload.phone);

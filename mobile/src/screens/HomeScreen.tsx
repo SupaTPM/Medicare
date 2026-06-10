@@ -11,7 +11,7 @@ import { FlowCard } from "@/components/FlowCard";
 import { QuickAction } from "@/components/QuickAction";
 import { Screen } from "@/components/Screen";
 import { SectionTitle } from "@/components/SectionTitle";
-import { HomeSkeleton, SkeletonList } from "@/components/Skeleton";
+import { Skeleton, SkeletonList } from "@/components/Skeleton";
 import { StatusPill } from "@/components/StatusPill";
 import { StatCard } from "@/components/StatCard";
 import { useAppState } from "@/state/AppContext";
@@ -21,7 +21,7 @@ import { spacing } from "@/theme/spacing";
 
 export function HomeScreen() {
   const navigation = useNavigation<any>();
-  const { alerts, appointments, isSyncing, patients, user } = useAppState();
+  const { alerts, appointments, loadingSections, patients, user } = useAppState();
   const nextAppointment = appointments[0];
 
   if (!user) {
@@ -32,44 +32,46 @@ export function HomeScreen() {
     <Screen>
       <ClinicalHeader user={user} onNotifications={() => navigation.navigate("Notifications")} />
 
-      {isSyncing ? <HomeSkeleton /> : null}
-
-      {!isSyncing && user.role === "patient" ? (
+      {user.role === "patient" ? (
         <>
-          <Pressable
-            disabled={!nextAppointment}
-            onPress={() => navigation.navigate("AppointmentDetail", { appointmentId: nextAppointment?.id })}
-            style={({ pressed }) => [pressed && nextAppointment ? styles.heroCardPressed : null]}
-          >
-            <LinearGradient colors={[palette.primaryDeep, palette.primaryStrong, "#143f86"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
-              <View style={styles.heroTop}>
-                <View style={styles.heroBadge}>
-                  <Ionicons color="#c4d2ff" name="calendar" size={14} />
-                  <Text style={styles.heroEyebrow}>{nextAppointment ? "Proxima cita" : "Panel del paciente"}</Text>
+          {loadingSections.appointments ? (
+            <Skeleton height={220} radius={24} style={styles.heroSkeleton} />
+          ) : (
+            <Pressable
+              disabled={!nextAppointment}
+              onPress={() => navigation.navigate("AppointmentDetail", { appointmentId: nextAppointment?.id })}
+              style={({ pressed }) => [pressed && nextAppointment ? styles.heroCardPressed : null]}
+            >
+              <LinearGradient colors={[palette.primaryDeep, palette.primaryStrong, "#143f86"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
+                <View style={styles.heroTop}>
+                  <View style={styles.heroBadge}>
+                    <Ionicons color="#c4d2ff" name="calendar" size={14} />
+                    <Text style={styles.heroEyebrow}>{nextAppointment ? "Proxima cita" : "Panel del paciente"}</Text>
+                  </View>
+                  <StatusPill label={nextAppointment ? "Confirmada" : "Activo"} tone="green" />
                 </View>
-                <StatusPill label={nextAppointment ? "Confirmada" : "Activo"} tone="green" />
-              </View>
-              <Text style={styles.heroTitle}>{nextAppointment?.specialty ?? "Gestiona tu atencion medica"}</Text>
-              <Text style={styles.heroMeta}>
-                {nextAppointment ? `${nextAppointment.dateLabel} | ${nextAppointment.timeLabel}` : "Agenda citas, revisa tu historial y mantén tus datos clinicos al dia."}
-              </Text>
-              <View style={styles.heroFooter}>
-                <View>
-                  <Text style={styles.heroLabel}>{nextAppointment ? "Profesional asignado" : "Siguiente paso recomendado"}</Text>
-                  <Text style={styles.heroStatus}>{nextAppointment?.doctorName ?? "Completar informacion del perfil"}</Text>
+                <Text style={styles.heroTitle}>{nextAppointment?.specialty ?? "Gestiona tu atencion medica"}</Text>
+                <Text style={styles.heroMeta}>
+                  {nextAppointment ? `${nextAppointment.dateLabel} | ${nextAppointment.timeLabel}` : "Agenda citas, revisa tu historial y manten tus datos clinicos al dia."}
+                </Text>
+                <View style={styles.heroFooter}>
+                  <View>
+                    <Text style={styles.heroLabel}>{nextAppointment ? "Profesional asignado" : "Siguiente paso recomendado"}</Text>
+                    <Text style={styles.heroStatus}>{nextAppointment?.doctorName ?? "Completar informacion del perfil"}</Text>
+                  </View>
+                  <View style={styles.qrMark}>
+                    <Ionicons color="#ffffff" name={nextAppointment ? "qr-code" : "heart-circle"} size={24} />
+                  </View>
                 </View>
-                <View style={styles.qrMark}>
-                  <Ionicons color="#ffffff" name={nextAppointment ? "qr-code" : "heart-circle"} size={24} />
-                </View>
-              </View>
-              {nextAppointment ? (
-                <View style={styles.heroHint}>
-                  <Ionicons color="#c4d2ff" name="information-circle-outline" size={14} />
-                  <Text style={styles.heroHintText}>Toca para ver el detalle y el QR de tu cita</Text>
-                </View>
-              ) : null}
-            </LinearGradient>
-          </Pressable>
+                {nextAppointment ? (
+                  <View style={styles.heroHint}>
+                    <Ionicons color="#c4d2ff" name="information-circle-outline" size={14} />
+                    <Text style={styles.heroHintText}>Toca para ver el detalle y el QR de tu cita</Text>
+                  </View>
+                ) : null}
+              </LinearGradient>
+            </Pressable>
+          )}
           <SectionTitle eyebrow="Acciones" title="Que puedes hacer" />
           <View style={styles.grid}>
             <QuickAction icon="calendar-outline" label="Agendar y revisar citas" onPress={() => navigation.navigate("Citas")} tone="primary" />
@@ -84,14 +86,14 @@ export function HomeScreen() {
             <View style={styles.patientBriefCopy}>
               <Text style={styles.patientBriefTitle}>Tu expediente se actualiza con datos reales</Text>
               <Text style={styles.patientBriefText}>
-                Mantén alergias, telefono y antecedentes completos para que recepcion y doctores tengan mejor contexto.
+                Manten alergias, telefono y antecedentes completos para que recepcion y doctores tengan mejor contexto.
               </Text>
             </View>
           </View>
         </>
       ) : null}
 
-      {!isSyncing && user.role === "doctor" ? (
+      {user.role === "doctor" ? (
         <>
           <FlowCard
             icon="pulse-outline"
@@ -107,14 +109,14 @@ export function HomeScreen() {
             <QuickAction icon="medkit-outline" label="Registrar atencion" onPress={() => navigation.navigate("CreateMedicalRecord")} tone="secondary" />
           </View>
           <View style={styles.list}>
-            {appointments.length ? appointments.map((item) => (
+            {loadingSections.appointments ? <SkeletonList count={2} /> : appointments.map((item) => (
               <AppointmentCard item={item} key={item.id} onPress={() => navigation.navigate("AppointmentDetail", { appointmentId: item.id })} />
-            )) : <SkeletonList count={2} />}
+            ))}
           </View>
         </>
       ) : null}
 
-      {!isSyncing && user.role === "receptionist" ? (
+      {user.role === "receptionist" ? (
         <>
           <FlowCard
             icon="people-outline"
@@ -132,7 +134,7 @@ export function HomeScreen() {
           </View>
           <View style={styles.list}>
             <SectionTitle eyebrow="Sala" title="Pacientes en espera" />
-            {patients.slice(0, 2).map((patient) => (
+            {loadingSections.patients ? <SkeletonList count={2} /> : patients.slice(0, 2).map((patient) => (
               <AlertBox
                 item={{
                   id: patient.id,
@@ -147,7 +149,7 @@ export function HomeScreen() {
         </>
       ) : null}
 
-      {!isSyncing && user.role === "admin" ? (
+      {user.role === "admin" ? (
         <>
           <SectionTitle eyebrow="Control" title="Dashboard operativo" />
           <View style={styles.statRow}>
@@ -170,14 +172,10 @@ export function HomeScreen() {
         </>
       ) : null}
 
-      {!isSyncing ? (
-        <>
-          <SectionTitle eyebrow="Alertas" title="Revision prioritaria" />
-          {alerts.map((item) => (
-            <AlertBox item={item} key={item.id} />
-          ))}
-        </>
-      ) : null}
+      <SectionTitle eyebrow="Alertas" title="Revision prioritaria" />
+      {loadingSections.patients ? <SkeletonList count={2} /> : alerts.map((item) => (
+        <AlertBox item={item} key={item.id} />
+      ))}
     </Screen>
   );
 }
@@ -204,6 +202,9 @@ const styles = StyleSheet.create({
     color: "#c4d2ff",
     fontSize: 12,
     fontWeight: "700"
+  },
+  heroSkeleton: {
+    marginBottom: spacing.md
   },
   heroTop: {
     alignItems: "center",

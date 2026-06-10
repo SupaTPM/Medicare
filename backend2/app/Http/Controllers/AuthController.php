@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Http\Resources\DoctorProfileResource;
+use App\Models\DoctorProfile;
+use App\Models\Patient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -31,14 +33,16 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'email' => ['required', 'email'],
+            'identifier' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'string', 'max:255'],
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $data['email'])->first();
+        $identifier = trim((string) ($data['identifier'] ?? $data['email'] ?? ''));
+        $user = $this->findUserByIdentifier($identifier);
 
         if (! $user || ! Hash::check($data['password'], $user->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 422);
+            return response()->json(['message' => 'Credenciales invalidas.'], 422);
         }
 
         return response()->json([
@@ -66,5 +70,32 @@ class AuthController extends Controller
         }
 
         return $user->toArray();
+    }
+
+    private function findUserByIdentifier(string $identifier): ?User
+    {
+        if ($identifier === '') {
+            return null;
+        }
+
+        if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+            return User::query()->where('email', $identifier)->first();
+        }
+
+        $patient = Patient::query()
+            ->where('cedula', $identifier)
+            ->with('user')
+            ->first();
+
+        if ($patient?->user) {
+            return $patient->user;
+        }
+
+        $doctorProfile = DoctorProfile::query()
+            ->where('cedula', $identifier)
+            ->with('user')
+            ->first();
+
+        return $doctorProfile?->user;
     }
 }

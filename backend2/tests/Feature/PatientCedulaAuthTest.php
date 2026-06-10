@@ -64,6 +64,34 @@ class PatientCedulaAuthTest extends TestCase
         $this->assertNotEmpty($response->json('token'));
     }
 
+    public function test_doctor_can_login_with_cedula_and_password(): void
+    {
+        $doctor = User::create([
+            'name' => 'Dr. Ruiz',
+            'email' => 'doctor@example.com',
+            'password' => 'password123',
+            'role' => 'doctor',
+        ]);
+
+        DoctorProfile::create([
+            'user_id' => $doctor->id,
+            'cedula' => '0911111111',
+            'specialty' => 'Cardiologia',
+        ]);
+
+        $response = $this->postJson('/api/login', [
+            'identifier' => '0911111111',
+            'password' => 'password123',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('user.role', 'doctor')
+            ->assertJsonPath('user.doctor_profile.cedula', '0911111111');
+
+        $this->assertNotEmpty($response->json('token'));
+    }
+
     public function test_patient_can_book_slot_once_with_authenticated_session(): void
     {
         $doctor = User::create([

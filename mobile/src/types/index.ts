@@ -18,6 +18,7 @@ export type UserProfile = {
   email: string;
   role: UserRole;
   subtitle: string;
+  cedula?: string;
   specialty?: string;
   profilePhotoUrl?: string;
   licenseCode?: string;
@@ -31,6 +32,7 @@ export type UserProfile = {
 
 export type DoctorOption = UserProfile & {
   specialty: string;
+  cedula?: string;
   licenseCode?: string;
   phone?: string;
   bio?: string;

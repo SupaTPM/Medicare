@@ -48,14 +48,14 @@ function NotificationCard({
 }
 
 export function NotificationsScreen() {
-  const { alerts, appNotifications, isSyncing, markNotificationRead } = useAppState();
+  const { alerts, appNotifications, loadingSections, markNotificationRead } = useAppState();
 
   return (
     <Screen contentContainerStyle={{ gap: spacing.md }}>
       <SectionTitle eyebrow="Notificaciones" title="Alertas clinicas y operativas" />
-      {isSyncing ? <SkeletonList count={2} /> : null}
+      {loadingSections.notifications ? <SkeletonList count={2} /> : null}
 
-      {!isSyncing && appNotifications.length ? (
+      {!loadingSections.notifications && appNotifications.length ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Actividad reciente</Text>
           {appNotifications.map((notification) => (
@@ -68,7 +68,7 @@ export function NotificationsScreen() {
         </View>
       ) : null}
 
-      {!isSyncing && alerts.length ? (
+      {!loadingSections.patients && alerts.length ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Alertas clínicas</Text>
           {alerts.map((item) => (
@@ -77,7 +77,7 @@ export function NotificationsScreen() {
         </View>
       ) : null}
 
-      {!isSyncing && !appNotifications.length && !alerts.length ? (
+      {!loadingSections.notifications && !loadingSections.patients && !appNotifications.length && !alerts.length ? (
         <View style={styles.emptyCard}>
           <Ionicons color={palette.textMuted} name="checkmark-circle-outline" size={32} />
           <Text style={styles.emptyTitle}>Sin notificaciones</Text>

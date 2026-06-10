@@ -63,6 +63,7 @@ type AppState = {
   documents: MedicalDocument[];
   isReady: boolean;
   isSyncing: boolean;
+  loadingSections: LoadingSections;
   medicalRecords: MedicalRecord[];
   patients: Patient[];
   users: UserProfile[];
@@ -76,8 +77,8 @@ type AppState = {
   getDoctorProfile: (doctorId: string) => Promise<DoctorOption | null>;
   getDoctorsBySpecialty: (specialty: string) => Promise<DoctorOption[]>;
   getSpecialties: () => Promise<string[]>;
-  login: (email: string, password: string) => Promise<boolean>;
-  loginDoctor: (email: string, password: string) => Promise<boolean>;
+  login: (identifier: string, password: string) => Promise<boolean>;
+  loginDoctor: (identifier: string, password: string) => Promise<boolean>;
   loginWithCedula: (cedula: string) => Promise<boolean>;
   loginAsRole: (role: UserRole) => void;
   logout: () => void;
@@ -87,6 +88,26 @@ type AppState = {
   searchPatients: (query: string) => Promise<Patient[]>;
   markNotificationRead: (notificationId: string) => Promise<void>;
   updateDoctorProfile: (payload: UpdateDoctorProfilePayload) => Promise<boolean>;
+};
+
+type LoadingSections = {
+  users: boolean;
+  patients: boolean;
+  appointments: boolean;
+  medicalRecords: boolean;
+  documents: boolean;
+  notifications: boolean;
+  doctorProfile: boolean;
+};
+
+const EMPTY_LOADING_SECTIONS: LoadingSections = {
+  users: false,
+  patients: false,
+  appointments: false,
+  medicalRecords: false,
+  documents: false,
+  notifications: false,
+  doctorProfile: false
 };
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -104,6 +125,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
   const [documents, setDocuments] = useState<MedicalDocument[]>([]);
   const [appNotifications, setAppNotifications] = useState<AppNotification[]>([]);
+  const [loadingSections, setLoadingSections] = useState<LoadingSections>(EMPTY_LOADING_SECTIONS);
 
   const doctorProfiles = useMemo(() => users.filter((item) => item.role === "doctor"), [users]);
   const alerts = useMemo(() => buildAlerts(patients), [patients]);
@@ -150,7 +172,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       let resolvedDoctorUser: UserProfile | null = null;
 
       if (sessionUser?.role === "doctor") {
-        const doctorProfile = await loadDoctorProfile(nextToken, sessionUser.id);
+        setLoadingSection("doctorProfile", true);
+        let doctorProfile: DoctorOption;
+
+        try {
+          doctorProfile = await loadDoctorProfile(nextToken, sessionUser.id);
+        } finally {
+          setLoadingSection("doctorProfile", false);
+        }
+
         resolvedDoctorUser = doctorProfile;
         setUser(doctorProfile);
         await saveAuthSession({ token: nextToken, user: doctorProfile });
@@ -161,44 +191,117 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setAppointments([]);
           setMedicalRecords([]);
           setDocuments([]);
-          setAppNotifications(await loadNotifications(nextToken));
+          setLoadingSection("notifications", true);
+          try {
+            setAppNotifications(await loadNotifications(nextToken));
+          } finally {
+            setLoadingSection("notifications", false);
+          }
           return;
         }
       }
 
-      const usersPromise = isPatientSession
-        ? Promise.resolve<UserProfile[]>([])
-        : nextUsers ?? loadUsers(nextToken);
-      const patientsPromise = isPatientSession
-        ? loadCurrentPatient(nextToken).then((patient) => [patient])
-        : loadPatients(nextToken);
-
-      const [loadedUsers, loadedPatients] = await Promise.all([usersPromise, patientsPromise]);
-      let resolvedUsers = loadedUsers;
-
-      if (resolvedDoctorUser) {
-        if (!resolvedUsers.some((item) => item.id === resolvedDoctorUser?.id)) {
-          resolvedUsers = [resolvedDoctorUser, ...resolvedUsers];
+      const usersTask = (async (): Promise<UserProfile[]> => {
+        if (isPatientSession) {
+          setUsers([]);
+          return [];
         }
-      }
 
-      const loadedAppointments = await loadAppointments(nextToken, resolvedUsers);
+        if (nextUsers) {
+          setUsers(nextUsers);
+          return nextUsers;
+        }
 
-      const [loadedRecords, loadedDocuments, loadedNotifications] = await Promise.all([
-        Promise.all(loadedPatients.map((patient) => loadPatientRecords(nextToken, patient.id))).then((items) => items.flat()),
-        Promise.all(loadedPatients.map((patient) => loadPatientDocuments(nextToken, patient.id))).then((items) => items.flat()),
-        loadNotifications(nextToken)
+        setLoadingSection("users", true);
+        try {
+          const loadedUsers = await loadUsers(nextToken);
+          setUsers(loadedUsers);
+          return loadedUsers;
+        } finally {
+          setLoadingSection("users", false);
+        }
+      })();
+
+      const patientsTask = (async (): Promise<Patient[]> => {
+        setLoadingSection("patients", true);
+        try {
+          const loadedPatients = isPatientSession
+            ? [await loadCurrentPatient(nextToken)]
+            : await loadPatients(nextToken);
+          setPatients(loadedPatients);
+          return loadedPatients;
+        } finally {
+          setLoadingSection("patients", false);
+        }
+      })();
+
+      const appointmentsTask = usersTask.then(async (loadedUsers): Promise<void> => {
+        let resolvedUsers = loadedUsers;
+
+        if (resolvedDoctorUser && !resolvedUsers.some((item) => item.id === resolvedDoctorUser?.id)) {
+          resolvedUsers = [resolvedDoctorUser, ...resolvedUsers];
+          setUsers(resolvedUsers);
+        }
+
+        setLoadingSection("appointments", true);
+        try {
+          setAppointments(await loadAppointments(nextToken, resolvedUsers));
+        } finally {
+          setLoadingSection("appointments", false);
+        }
+      });
+
+      const recordsTask = patientsTask.then(async (loadedPatients): Promise<void> => {
+        setLoadingSection("medicalRecords", true);
+        try {
+          const loadedRecords = await Promise.all(
+            loadedPatients.map((patient) => loadPatientRecords(nextToken, patient.id))
+          ).then((items) => items.flat());
+          setMedicalRecords(loadedRecords);
+        } finally {
+          setLoadingSection("medicalRecords", false);
+        }
+      });
+
+      const documentsTask = patientsTask.then(async (loadedPatients): Promise<void> => {
+        setLoadingSection("documents", true);
+        try {
+          const loadedDocuments = await Promise.all(
+            loadedPatients.map((patient) => loadPatientDocuments(nextToken, patient.id))
+          ).then((items) => items.flat());
+          setDocuments(loadedDocuments);
+        } finally {
+          setLoadingSection("documents", false);
+        }
+      });
+
+      const notificationsTask = (async (): Promise<void> => {
+        setLoadingSection("notifications", true);
+        try {
+          setAppNotifications(await loadNotifications(nextToken));
+        } finally {
+          setLoadingSection("notifications", false);
+        }
+      })();
+
+      await Promise.all([
+        usersTask,
+        patientsTask,
+        appointmentsTask,
+        recordsTask,
+        documentsTask,
+        notificationsTask
       ]);
-
-      setUsers(resolvedUsers);
-      setPatients(loadedPatients);
-      setAppointments(loadedAppointments);
-      setMedicalRecords(loadedRecords);
-      setDocuments(loadedDocuments);
-      setAppNotifications(loadedNotifications);
     } finally {
       setIsSyncing(false);
     }
+  }
+
+  function setLoadingSection(section: keyof LoadingSections, loading: boolean) {
+    setLoadingSections((current) => ({
+      ...current,
+      [section]: loading
+    }));
   }
 
   async function registerPushToken(nextToken: string) {
@@ -225,11 +328,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await refreshDataWithToken(token);
   }
 
-  async function login(email: string, password: string) {
+  async function login(identifier: string, password: string) {
     try {
       setIsSyncing(true);
       setAuthError(null);
-      const response = await loginRequest(email.trim(), password);
+      const trimmedIdentifier = identifier.trim();
+      const normalizedCedula = normalizeCedula(trimmedIdentifier);
+      const response = normalizedCedula.length === 10 && normalizedCedula === trimmedIdentifier && !password.trim()
+        ? await loginWithCedulaRequest(normalizedCedula)
+        : await loginRequest(trimmedIdentifier, password);
       setToken(response.token);
       setUser(response.user);
       await saveAuthSession({ token: response.token, user: response.user });
@@ -242,8 +349,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function loginDoctor(email: string, password: string) {
-    const loggedIn = await login(email, password);
+  async function loginDoctor(identifier: string, password: string) {
+    const loggedIn = await login(identifier, password);
 
     if (!loggedIn) {
       return false;
@@ -530,6 +637,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setMedicalRecords([]);
     setDocuments([]);
     setAppNotifications([]);
+    setLoadingSections(EMPTY_LOADING_SECTIONS);
     void clearAuthSession();
   }
 
@@ -543,6 +651,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       documents,
       isReady,
       isSyncing,
+      loadingSections,
       medicalRecords,
       patients,
       users,
@@ -568,7 +677,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       markNotificationRead,
       updateDoctorProfile
     }),
-    [alerts, appNotifications, appointments, authError, deviceRegistration, documents, doctorProfiles, isReady, isSyncing, medicalRecords, patients, users, user, token]
+    [alerts, appNotifications, appointments, authError, deviceRegistration, documents, doctorProfiles, isReady, isSyncing, loadingSections, medicalRecords, patients, users, user, token]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

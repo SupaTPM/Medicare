@@ -24,6 +24,7 @@ class DoctorProfileController extends Controller
         $isDoctorSelfOnboarding = $request->user()?->id === $doctor->id && $request->user()?->role === 'doctor';
 
         $data = $request->validate([
+            'cedula' => [$isDoctorSelfOnboarding ? 'required' : 'nullable', 'string', 'max:20', 'unique:doctor_profiles,cedula,' . ($doctor->doctorProfile?->id ?? 'NULL')],
             'specialty' => [$isDoctorSelfOnboarding ? 'required' : 'sometimes', 'string', 'max:255'],
             'license_code' => [$isDoctorSelfOnboarding ? 'required' : 'nullable', 'string', 'max:255'],
             'phone' => [$isDoctorSelfOnboarding ? 'required' : 'nullable', 'string', 'max:25'],

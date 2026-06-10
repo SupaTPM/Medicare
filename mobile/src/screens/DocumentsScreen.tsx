@@ -26,14 +26,14 @@ function iconForDocument(type: string): keyof typeof Ionicons.glyphMap {
 }
 
 export function DocumentsScreen({ route }: any) {
-  const { documents, isSyncing } = useAppState();
+  const { documents, loadingSections } = useAppState();
   const patientId = route?.params?.patientId as string | undefined;
   const visibleDocuments = patientId ? documents.filter((document) => document.patientId === patientId) : documents;
 
   return (
     <Screen contentContainerStyle={{ gap: spacing.sm }}>
       <SectionTitle eyebrow="Documentos" title="Archivos medicos" />
-      {isSyncing ? <SkeletonList count={3} /> : visibleDocuments.map((document) => (
+      {loadingSections.documents ? <SkeletonList count={3} /> : visibleDocuments.map((document) => (
         <View key={document.id} style={styles.card}>
           <View style={styles.iconBox}>
             <Ionicons color={palette.primaryStrong} name={iconForDocument(document.type)} size={22} />
@@ -53,7 +53,7 @@ export function DocumentsScreen({ route }: any) {
           </View>
         </View>
       ))}
-      {!isSyncing && !visibleDocuments.length ? (
+      {!loadingSections.documents && !visibleDocuments.length ? (
         <View style={styles.emptyCard}>
           <View style={styles.emptyIcon}>
             <Ionicons color={palette.primaryStrong} name="folder-open-outline" size={26} />

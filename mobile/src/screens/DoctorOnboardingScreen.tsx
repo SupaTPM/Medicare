@@ -32,6 +32,7 @@ function buildPhotoFile(asset: ImagePicker.ImagePickerAsset): SelectedPhoto {
 
 export function DoctorOnboardingScreen() {
   const { authError, logout, updateDoctorProfile, user } = useAppState();
+  const [cedula, setCedula] = useState(user?.cedula ?? "");
   const [specialty, setSpecialty] = useState(user?.specialty ?? "");
   const [licenseCode, setLicenseCode] = useState(user?.licenseCode ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
@@ -54,6 +55,7 @@ export function DoctorOnboardingScreen() {
 
   const canSave = Boolean(
     specialty.trim()
+      && cedula.trim().length >= 10
       && licenseCode.trim()
       && phone.trim()
       && bio.trim().length >= 30
@@ -101,6 +103,7 @@ export function DoctorOnboardingScreen() {
     setLocalError(null);
 
     const saved = await updateDoctorProfile({
+      cedula: cedula.trim(),
       specialty: specialty.trim(),
       license_code: licenseCode.trim(),
       phone: phone.trim(),
@@ -145,6 +148,7 @@ export function DoctorOnboardingScreen() {
         </View>
 
         <View style={styles.formCard}>
+          <TextField keyboardType="numeric" label="Cédula profesional" onChangeText={setCedula} placeholder="0911111111" value={cedula} />
           <TextField label="Especialidad" onChangeText={setSpecialty} placeholder="Cardiologia" value={specialty} />
           <TextField label="Codigo profesional" onChangeText={setLicenseCode} placeholder="MED-001" value={licenseCode} />
           <TextField keyboardType="phone-pad" label="Telefono de contacto" onChangeText={setPhone} placeholder="0990000001" value={phone} />

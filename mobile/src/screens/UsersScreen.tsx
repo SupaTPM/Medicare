@@ -10,19 +10,19 @@ import { palette } from "@/theme/palette";
 import { spacing } from "@/theme/spacing";
 
 export function UsersScreen() {
-  const { isSyncing, users } = useAppState();
+  const { loadingSections, users } = useAppState();
 
   return (
     <Screen>
       <SectionTitle eyebrow="Usuarios" title="Roles y accesos" />
-      {isSyncing ? <SkeletonList count={3} /> : users.map((user) => (
+      {loadingSections.users ? <SkeletonList count={3} /> : users.map((user) => (
         <View key={user.id} style={styles.card}>
           <Text style={styles.name}>{user.name}</Text>
           <Text style={styles.meta}>{user.email}</Text>
           <Text style={styles.role}>{user.role}</Text>
         </View>
       ))}
-      {!isSyncing && !users.length ? <Text style={styles.empty}>Inicia sesion para cargar usuarios reales.</Text> : null}
+      {!loadingSections.users && !users.length ? <Text style={styles.empty}>Inicia sesion para cargar usuarios reales.</Text> : null}
     </Screen>
   );
 }

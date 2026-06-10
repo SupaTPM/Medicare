@@ -13,6 +13,7 @@ class DoctorProfile extends Model
 
     protected $fillable = [
         'user_id',
+        'cedula',
         'specialty',
         'license_code',
         'phone',

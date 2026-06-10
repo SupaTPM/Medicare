@@ -11,12 +11,12 @@ import { palette } from "@/theme/palette";
 import { spacing } from "@/theme/spacing";
 
 export function MedicalRecordScreen() {
-  const { isSyncing, medicalRecords } = useAppState();
+  const { loadingSections, medicalRecords } = useAppState();
 
   return (
     <Screen contentContainerStyle={{ gap: spacing.sm }}>
       <SectionTitle eyebrow="Historial" title="Registros clinicos" />
-      {isSyncing ? <SkeletonList count={3} /> : medicalRecords.map((record) => {
+      {loadingSections.medicalRecords ? <SkeletonList count={3} /> : medicalRecords.map((record) => {
         const vitals = record.vitalSigns
           .split(",")
           .map((item) => item.trim())
@@ -60,7 +60,7 @@ export function MedicalRecordScreen() {
           </View>
         );
       })}
-      {!isSyncing && !medicalRecords.length ? (
+      {!loadingSections.medicalRecords && !medicalRecords.length ? (
         <View style={styles.emptyCard}>
           <View style={styles.emptyIcon}>
             <Ionicons color={palette.primaryStrong} name="document-text-outline" size={26} />

@@ -20,6 +20,7 @@ class DemoSeeder extends Seeder
         ]);
 
         $doctor->doctorProfile()->updateOrCreate([], [
+            'cedula' => '0911111111',
             'specialty' => 'Cardiologia',
             'license_code' => 'MED-001',
             'phone' => '0990000001',
@@ -36,6 +37,7 @@ class DemoSeeder extends Seeder
         ]);
 
         $generalDoctor->doctorProfile()->updateOrCreate([], [
+            'cedula' => '0922222222',
             'specialty' => 'Medicina general',
             'license_code' => 'MED-002',
             'phone' => '0990000002',
@@ -52,6 +54,7 @@ class DemoSeeder extends Seeder
         ]);
 
         $pediatrician->doctorProfile()->updateOrCreate([], [
+            'cedula' => '0933333333',
             'specialty' => 'Pediatria',
             'license_code' => 'MED-003',
             'phone' => '0990000003',
