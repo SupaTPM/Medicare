@@ -9,13 +9,15 @@ import { cardShadow } from "@/theme/shadows";
 import { palette } from "@/theme/palette";
 import { spacing } from "@/theme/spacing";
 
-export function DocumentsScreen() {
+export function DocumentsScreen({ route }: any) {
   const { documents, isSyncing } = useAppState();
+  const patientId = route?.params?.patientId as string | undefined;
+  const visibleDocuments = patientId ? documents.filter((document) => document.patientId === patientId) : documents;
 
   return (
     <Screen>
       <SectionTitle eyebrow="Documentos" title="Archivos medicos" />
-      {isSyncing ? <SkeletonList count={3} /> : documents.map((document) => (
+      {isSyncing ? <SkeletonList count={3} /> : visibleDocuments.map((document) => (
         <View key={document.id} style={styles.card}>
           <Text style={styles.title}>{document.title}</Text>
           <Text style={styles.meta}>
@@ -24,7 +26,7 @@ export function DocumentsScreen() {
           <Text style={styles.meta}>Subido por {document.uploadedBy}</Text>
         </View>
       ))}
-      {!isSyncing && !documents.length ? <Text style={styles.empty}>Aun no hay documentos reales.</Text> : null}
+      {!isSyncing && !visibleDocuments.length ? <Text style={styles.empty}>Aun no hay documentos reales.</Text> : null}
     </Screen>
   );
 }

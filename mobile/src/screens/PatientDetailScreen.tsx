@@ -10,9 +10,10 @@ import { useAppState } from "@/state/AppContext";
 import { cardShadow } from "@/theme/shadows";
 import { palette } from "@/theme/palette";
 import { spacing } from "@/theme/spacing";
+import { isStaff } from "@/utils/roles";
 
 export function PatientDetailScreen({ route, navigation }: any) {
-  const { patients, medicalRecords } = useAppState();
+  const { patients, medicalRecords, user } = useAppState();
   const patient = patients.find((item) => item.id === route.params?.patientId) ?? patients[0];
   const records = medicalRecords.filter((item) => item.patientId === patient.id);
 
@@ -33,8 +34,10 @@ export function PatientDetailScreen({ route, navigation }: any) {
         <Text style={styles.row}>Telefono: {patient.phone}</Text>
       </View>
       <AlertBox item={{ id: "allergy", tone: patient.allergies[0] === "Ninguna registrada" ? "info" : "danger", title: "Alergias", body: patient.allergies.join(", ") }} />
-      <PrimaryButton icon="medkit-outline" label="Registrar atencion" onPress={() => navigation.navigate("CreateMedicalRecord", { patientId: patient.id })} />
-      <PrimaryButton icon="folder-open-outline" label="Ver documentos" onPress={() => navigation.navigate("PatientDocuments")} style={styles.button} variant="secondary" />
+      {isStaff(user) ? (
+        <PrimaryButton icon="medkit-outline" label="Registrar atencion" onPress={() => navigation.navigate("CreateMedicalRecord", { patientId: patient.id })} />
+      ) : null}
+      <PrimaryButton icon="folder-open-outline" label="Ver documentos" onPress={() => navigation.navigate("PatientDocuments", { patientId: patient.id })} style={styles.button} variant="secondary" />
       <SectionTitle eyebrow="Historial" title="Ultimas atenciones" />
       {records.length ? records.map((record) => (
         <View key={record.id} style={styles.card}>

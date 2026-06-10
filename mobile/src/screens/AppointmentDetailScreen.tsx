@@ -12,8 +12,9 @@ import { palette } from "@/theme/palette";
 import { spacing } from "@/theme/spacing";
 
 export function AppointmentDetailScreen({ route, navigation }: any) {
-  const { appointments } = useAppState();
+  const { appointments, user } = useAppState();
   const appointment = appointments.find((item) => item.id === route.params?.appointmentId) ?? appointments[0];
+  const canRegisterAttention = user?.role === "doctor";
 
   return (
     <Screen>
@@ -36,7 +37,9 @@ export function AppointmentDetailScreen({ route, navigation }: any) {
         <QRCode value={appointment.qrCode} size={180} />
         <Text style={styles.code}>{appointment.qrCode}</Text>
       </View>
-      <PrimaryButton icon="medkit-outline" label="Registrar atencion" onPress={() => navigation.navigate("CreateMedicalRecord", { appointmentId: appointment.id })} />
+      {canRegisterAttention ? (
+        <PrimaryButton icon="medkit-outline" label="Registrar atencion" onPress={() => navigation.navigate("CreateMedicalRecord", { appointmentId: appointment.id })} />
+      ) : null}
     </Screen>
   );
 }

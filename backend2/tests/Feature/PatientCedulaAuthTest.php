@@ -93,10 +93,16 @@ class PatientCedulaAuthTest extends TestCase
         $token = $authResponse->json('token');
         $patientId = $authResponse->json('patient.id');
 
+        // Otro paciente real: el servidor debe ignorar este patient_id y forzar el de la sesión.
+        $otherPatient = Patient::create([
+            'full_name' => 'Luis Torres',
+            'cedula' => '0999999999',
+        ]);
+
         $firstBooking = $this
             ->withHeader('Authorization', "Bearer {$token}")
             ->postJson('/api/appointments', [
-                'patient_id' => 999999,
+                'patient_id' => $otherPatient->id,
                 'availability_slot_id' => $slot->id,
                 'specialty' => 'Cardiologia',
                 'reason' => 'Control anual',

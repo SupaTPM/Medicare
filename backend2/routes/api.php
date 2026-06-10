@@ -23,6 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::get('/me/patient', [PatientController::class, 'me']);
+    Route::put('/me/patient', [PatientController::class, 'completeProfile']);
     Route::get('/users', [UserController::class, 'index']);
 
     Route::get('/patients', [PatientController::class, 'index']);

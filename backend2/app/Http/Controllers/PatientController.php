@@ -26,6 +26,8 @@ class PatientController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $this->abortUnlessStaff($request->user());
+
         $data = $request->validate([
             'full_name' => ['required', 'string', 'max:255'],
             'cedula' => ['required', 'string', 'max:20', 'unique:patients,cedula'],
@@ -39,6 +41,10 @@ class PatientController extends Controller
             'allergies' => ['nullable', 'array'],
             'previous_conditions' => ['nullable', 'array'],
             'current_medications' => ['nullable', 'array'],
+            'chronic_conditions' => ['nullable', 'array'],
+            'has_disability' => ['nullable', 'boolean'],
+            'disability_type' => ['nullable', 'string', 'max:255'],
+            'disability_percentage' => ['nullable', 'integer', 'min:1', 'max:100'],
             'insurance_name' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -115,6 +121,42 @@ class PatientController extends Controller
         return response()->json($patient);
     }
 
+    public function completeProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $patient = $user?->patient;
+
+        abort_unless($patient, 404, 'El usuario autenticado no tiene paciente vinculado.');
+
+        $data = $request->validate([
+            'full_name' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'string', 'max:25'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'address' => ['required', 'string', 'max:500'],
+            'blood_type' => ['required', 'string', 'max:10'],
+            'allergies' => ['nullable', 'array'],
+            'allergies.*' => ['string', 'max:255'],
+            'chronic_conditions' => ['nullable', 'array'],
+            'chronic_conditions.*' => ['string', 'max:255'],
+            'has_disability' => ['required', 'boolean'],
+            'disability_type' => ['nullable', 'required_if:has_disability,true', 'string', 'max:255'],
+            'disability_percentage' => ['nullable', 'required_if:has_disability,true', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        if (empty($data['has_disability'])) {
+            $data['disability_type'] = null;
+            $data['disability_percentage'] = null;
+        }
+
+        $data['profile_completed_at'] = now();
+
+        $patient->update($data);
+
+        $user->forceFill(['name' => $data['full_name']])->save();
+
+        return response()->json($patient->refresh());
+    }
+
     public function show(Patient $patient): JsonResponse
     {
         $this->authorizePatientAccess(request()->user(), $patient);
@@ -139,6 +181,10 @@ class PatientController extends Controller
             'allergies' => ['nullable', 'array'],
             'previous_conditions' => ['nullable', 'array'],
             'current_medications' => ['nullable', 'array'],
+            'chronic_conditions' => ['nullable', 'array'],
+            'has_disability' => ['nullable', 'boolean'],
+            'disability_type' => ['nullable', 'string', 'max:255'],
+            'disability_percentage' => ['nullable', 'integer', 'min:1', 'max:100'],
             'insurance_name' => ['nullable', 'string', 'max:255'],
         ]);
 

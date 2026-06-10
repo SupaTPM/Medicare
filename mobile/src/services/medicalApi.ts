@@ -35,7 +35,14 @@ type ApiPatient = {
   birth_date?: string | null;
   blood_type?: string | null;
   phone?: string | null;
+  email?: string | null;
+  address?: string | null;
   allergies?: string[] | null;
+  chronic_conditions?: string[] | null;
+  has_disability?: boolean | null;
+  disability_type?: string | null;
+  disability_percentage?: number | null;
+  profile_completed_at?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -105,6 +112,19 @@ export type CreatePatientPayload = {
   phone?: string;
   allergies?: string[];
   previous_conditions?: string[];
+};
+
+export type CompletePatientProfilePayload = {
+  full_name: string;
+  phone: string;
+  email?: string;
+  address: string;
+  blood_type: string;
+  allergies?: string[];
+  chronic_conditions?: string[];
+  has_disability: boolean;
+  disability_type?: string;
+  disability_percentage?: number;
 };
 
 export type CreateAppointmentPayload = {
@@ -213,9 +233,16 @@ export function mapPatient(patient: ApiPatient): Patient {
     age: calculateAge(patient.birth_date),
     bloodType: patient.blood_type ?? "No registrado",
     allergies: patient.allergies?.length ? patient.allergies : ["Sin alergias registradas"],
+    chronicConditions: patient.chronic_conditions ?? [],
     phone: patient.phone ?? "No registrado",
+    email: patient.email ?? "",
+    address: patient.address ?? "",
+    hasDisability: Boolean(patient.has_disability),
+    disabilityType: patient.disability_type ?? undefined,
+    disabilityPercentage: patient.disability_percentage ?? undefined,
     lastVisit: formatDate(patient.updated_at ?? patient.created_at),
-    nextSpecialty: undefined
+    nextSpecialty: undefined,
+    profileCompleted: Boolean(patient.profile_completed_at)
   };
 }
 
@@ -305,6 +332,16 @@ export async function loginWithCedulaRequest(cedula: string) {
 
 export async function loadCurrentPatient(token: string) {
   const patient = await apiRequest<ApiPatient>("/me/patient", { token });
+  return mapPatient(patient);
+}
+
+export async function completePatientProfileRequest(token: string, payload: CompletePatientProfilePayload) {
+  const patient = await apiRequest<ApiPatient>("/me/patient", {
+    method: "PUT",
+    token,
+    body: JSON.stringify(payload)
+  });
+
   return mapPatient(patient);
 }
 

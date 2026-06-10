@@ -2,15 +2,23 @@ import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 
+import { AccessDenied } from "@/components/AccessDenied";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { SectionTitle } from "@/components/SectionTitle";
+import { useAppState } from "@/state/AppContext";
 import { palette } from "@/theme/palette";
 import { spacing } from "@/theme/spacing";
+import { isStaff } from "@/utils/roles";
 
 export function QRScannerScreen() {
+  const { user } = useAppState();
   const [permission, requestPermission] = useCameraPermissions();
   const [lastScan, setLastScan] = useState<string | null>(null);
+
+  if (!isStaff(user)) {
+    return <AccessDenied message="El escáner de QR es solo para personal médico." />;
+  }
 
   if (!permission?.granted) {
     return (

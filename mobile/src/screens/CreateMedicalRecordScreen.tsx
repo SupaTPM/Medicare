@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
+import { AccessDenied } from "@/components/AccessDenied";
 import { FlowCard } from "@/components/FlowCard";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
@@ -10,6 +11,7 @@ import { TextField } from "@/components/TextField";
 import { useAppState } from "@/state/AppContext";
 import { palette } from "@/theme/palette";
 import { spacing } from "@/theme/spacing";
+import { isStaff } from "@/utils/roles";
 
 export function CreateMedicalRecordScreen({ navigation }: any) {
   const { appointments, authError, createMedicalRecord, patients, user } = useAppState();
@@ -52,6 +54,10 @@ export function CreateMedicalRecordScreen({ navigation }: any) {
     if (saved) {
       navigation.navigate("Main");
     }
+  }
+
+  if (!isStaff(user)) {
+    return <AccessDenied />;
   }
 
   return (

@@ -23,9 +23,10 @@ class DocumentController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $this->abortUnlessStaff($request->user());
+
         $data = $request->validate([
             'patient_id' => ['required', 'exists:patients,id'],
-            'uploaded_by' => ['required', 'exists:users,id'],
             'title' => ['required', 'string', 'max:255'],
             'document_type' => ['required', 'string', 'max:100'],
             'file_path' => ['nullable', 'string'],
@@ -34,6 +35,7 @@ class DocumentController extends Controller
 
         $document = MedicalDocument::create([
             ...$data,
+            'uploaded_by' => $request->user()->id,
             'uploaded_at' => now(),
         ]);
 

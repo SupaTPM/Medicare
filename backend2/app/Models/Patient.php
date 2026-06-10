@@ -25,14 +25,22 @@ class Patient extends Model
         'allergies',
         'previous_conditions',
         'current_medications',
+        'chronic_conditions',
+        'has_disability',
+        'disability_type',
+        'disability_percentage',
         'insurance_name',
+        'profile_completed_at',
     ];
 
     protected $casts = [
         'allergies' => 'array',
         'previous_conditions' => 'array',
         'current_medications' => 'array',
+        'chronic_conditions' => 'array',
+        'has_disability' => 'boolean',
         'birth_date' => 'date',
+        'profile_completed_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

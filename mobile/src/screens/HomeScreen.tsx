@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -9,7 +9,6 @@ import { AppointmentCard } from "@/components/AppointmentCard";
 import { ClinicalHeader } from "@/components/ClinicalHeader";
 import { FlowCard } from "@/components/FlowCard";
 import { QuickAction } from "@/components/QuickAction";
-import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { SectionTitle } from "@/components/SectionTitle";
 import { HomeSkeleton, SkeletonList } from "@/components/Skeleton";
@@ -37,31 +36,40 @@ export function HomeScreen() {
 
       {!isSyncing && user.role === "patient" ? (
         <>
-          <LinearGradient colors={[palette.primaryDeep, palette.primaryStrong, "#143f86"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
-            <View style={styles.heroTop}>
-              <View style={styles.heroBadge}>
-                <Ionicons color="#c4d2ff" name="calendar" size={14} />
-                <Text style={styles.heroEyebrow}>{nextAppointment ? "Proxima cita" : "Panel del paciente"}</Text>
+          <Pressable
+            disabled={!nextAppointment}
+            onPress={() => navigation.navigate("AppointmentDetail", { appointmentId: nextAppointment?.id })}
+            style={({ pressed }) => [pressed && nextAppointment ? styles.heroCardPressed : null]}
+          >
+            <LinearGradient colors={[palette.primaryDeep, palette.primaryStrong, "#143f86"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
+              <View style={styles.heroTop}>
+                <View style={styles.heroBadge}>
+                  <Ionicons color="#c4d2ff" name="calendar" size={14} />
+                  <Text style={styles.heroEyebrow}>{nextAppointment ? "Proxima cita" : "Panel del paciente"}</Text>
+                </View>
+                <StatusPill label={nextAppointment ? "Confirmada" : "Activo"} tone="green" />
               </View>
-              <StatusPill label={nextAppointment ? "Confirmada" : "Activo"} tone="green" />
-            </View>
-            <Text style={styles.heroTitle}>{nextAppointment?.specialty ?? "Gestiona tu atencion medica"}</Text>
-            <Text style={styles.heroMeta}>
-              {nextAppointment ? `${nextAppointment.dateLabel} | ${nextAppointment.timeLabel}` : "Agenda citas, revisa tu historial y mantén tus datos clinicos al dia."}
-            </Text>
-            <View style={styles.heroFooter}>
-              <View>
-                <Text style={styles.heroLabel}>{nextAppointment ? "Profesional asignado" : "Siguiente paso recomendado"}</Text>
-                <Text style={styles.heroStatus}>{nextAppointment?.doctorName ?? "Completar informacion del perfil"}</Text>
+              <Text style={styles.heroTitle}>{nextAppointment?.specialty ?? "Gestiona tu atencion medica"}</Text>
+              <Text style={styles.heroMeta}>
+                {nextAppointment ? `${nextAppointment.dateLabel} | ${nextAppointment.timeLabel}` : "Agenda citas, revisa tu historial y mantén tus datos clinicos al dia."}
+              </Text>
+              <View style={styles.heroFooter}>
+                <View>
+                  <Text style={styles.heroLabel}>{nextAppointment ? "Profesional asignado" : "Siguiente paso recomendado"}</Text>
+                  <Text style={styles.heroStatus}>{nextAppointment?.doctorName ?? "Completar informacion del perfil"}</Text>
+                </View>
+                <View style={styles.qrMark}>
+                  <Ionicons color="#ffffff" name={nextAppointment ? "qr-code" : "heart-circle"} size={24} />
+                </View>
               </View>
-              <View style={styles.qrMark}>
-                <Ionicons color="#ffffff" name={nextAppointment ? "qr-code" : "heart-circle"} size={24} />
-              </View>
-            </View>
-          </LinearGradient>
-          {nextAppointment ? (
-            <PrimaryButton icon="qr-code-outline" label="Ver QR de cita" onPress={() => navigation.navigate("AppointmentQR")} style={styles.heroButton} variant="ghost" />
-          ) : null}
+              {nextAppointment ? (
+                <View style={styles.heroHint}>
+                  <Ionicons color="#c4d2ff" name="information-circle-outline" size={14} />
+                  <Text style={styles.heroHintText}>Toca para ver el detalle y el QR de tu cita</Text>
+                </View>
+              ) : null}
+            </LinearGradient>
+          </Pressable>
           <SectionTitle eyebrow="Acciones" title="Que puedes hacer" />
           <View style={styles.grid}>
             <QuickAction icon="calendar-outline" label="Agendar y revisar citas" onPress={() => navigation.navigate("Citas")} tone="primary" />
@@ -182,6 +190,21 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     ...raisedShadow
   },
+  heroCardPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.99 }]
+  },
+  heroHint: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+    marginTop: spacing.sm
+  },
+  heroHintText: {
+    color: "#c4d2ff",
+    fontSize: 12,
+    fontWeight: "700"
+  },
   heroTop: {
     alignItems: "center",
     flexDirection: "row",
@@ -240,9 +263,6 @@ const styles = StyleSheet.create({
     height: 48,
     justifyContent: "center",
     width: 48
-  },
-  heroButton: {
-    marginBottom: spacing.lg
   },
   grid: {
     flexDirection: "row",

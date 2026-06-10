@@ -63,9 +63,16 @@ export type Patient = {
   age: number;
   bloodType: string;
   allergies: string[];
+  chronicConditions: string[];
   phone: string;
+  email: string;
+  address: string;
+  hasDisability: boolean;
+  disabilityType?: string;
+  disabilityPercentage?: number;
   lastVisit: string;
   nextSpecialty?: string;
+  profileCompleted: boolean;
 };
 
 export type Appointment = {

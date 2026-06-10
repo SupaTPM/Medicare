@@ -9,6 +9,8 @@ import {
   CreateMedicalRecordPayload,
   createPatientRequest,
   CreatePatientPayload,
+  completePatientProfileRequest,
+  CompletePatientProfilePayload,
   loginWithCedulaRequest,
   loadDoctorAvailability,
   buildAlerts,
@@ -57,9 +59,10 @@ type AppState = {
   users: UserProfile[];
   user: UserProfile | null;
   authError: string | null;
-  createAppointment: (payload: CreateAppointmentPayload) => Promise<boolean>;
+  createAppointment: (payload: CreateAppointmentPayload) => Promise<Appointment | null>;
   createMedicalRecord: (payload: CreateMedicalRecordPayload) => Promise<boolean>;
   createPatient: (payload: CreatePatientPayload) => Promise<boolean>;
+  completePatientProfile: (payload: CompletePatientProfilePayload) => Promise<boolean>;
   getAvailableSlots: (doctorId: string) => Promise<AvailabilitySlot[]>;
   getDoctorsBySpecialty: (specialty: string) => Promise<DoctorOption[]>;
   getSpecialties: () => Promise<string[]>;
@@ -334,6 +337,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function completePatientProfile(payload: CompletePatientProfilePayload) {
+    if (!token) {
+      setAuthError("Sin token, vuelve a iniciar sesion.");
+      return false;
+    }
+
+    try {
+      const updatedPatient = await completePatientProfileRequest(token, payload);
+      setPatients((currentPatients) => {
+        const others = currentPatients.filter((item) => item.id !== updatedPatient.id);
+        return [updatedPatient, ...others];
+      });
+
+      if (user) {
+        const nextUser = { ...user, name: updatedPatient.fullName };
+        setUser(nextUser);
+        await saveAuthSession({ token, user: nextUser });
+      }
+
+      setAuthError(null);
+      return true;
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "No se pudo guardar tu registro medico.");
+      return false;
+    }
+  }
+
   async function getSpecialties() {
     return loadScheduleSpecialties(token ?? "");
   }
@@ -353,10 +383,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         : await createPublicAppointmentRequest(payload, users);
       setAppointments((currentAppointments) => [createdAppointment, ...currentAppointments]);
       setAuthError(null);
-      return true;
+      return createdAppointment;
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "No se pudo crear la cita.");
-      return false;
+      return null;
     }
   }
 
@@ -407,6 +437,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createAppointment,
       createMedicalRecord,
       createPatient,
+      completePatientProfile,
       getAvailableSlots,
       getDoctorsBySpecialty,
       getSpecialties,

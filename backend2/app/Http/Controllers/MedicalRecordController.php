@@ -24,6 +24,9 @@ class MedicalRecordController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $user = $request->user();
+        $this->abortUnlessStaff($user);
+
         $data = $request->validate([
             'appointment_id' => ['required', 'exists:appointments,id'],
             'patient_id' => ['required', 'exists:patients,id'],
@@ -40,6 +43,11 @@ class MedicalRecordController extends Controller
             'next_control_at' => ['nullable', 'date'],
             'ai_summary' => ['nullable', 'string'],
         ]);
+
+        // Un doctor solo puede registrar historiales a su propio nombre.
+        if ($user->role === UserRole::Doctor->value) {
+            $data['doctor_id'] = $user->id;
+        }
 
         $record = MedicalRecord::create($data);
         $record->appointment()->update(['status' => AppointmentStatus::Completed->value]);

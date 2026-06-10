@@ -13,7 +13,7 @@ export function TextField({ label, style, ...props }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>{label}</Text>
+      {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         autoCapitalize="none"
         onBlur={(event) => {

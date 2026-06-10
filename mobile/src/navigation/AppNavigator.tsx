@@ -1,5 +1,5 @@
 import React from "react";
-import { View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +19,7 @@ import { MedicalRecordScreen } from "@/screens/MedicalRecordScreen";
 import { NotificationsScreen } from "@/screens/NotificationsScreen";
 import { PatientDetailScreen } from "@/screens/PatientDetailScreen";
 import { PatientListScreen } from "@/screens/PatientListScreen";
+import { PatientOnboardingScreen } from "@/screens/PatientOnboardingScreen";
 import { ProfileScreen } from "@/screens/ProfileScreen";
 import { PublicQRAccessScreen } from "@/screens/PublicQRAccessScreen";
 import { PatientAccessScreen } from "@/screens/PatientAccessScreen";
@@ -142,8 +143,21 @@ function RoleTabs({ role }: { role: UserRole }) {
   );
 }
 
+function PatientLoadingScreen() {
+  return (
+    <View style={{ alignItems: "center", backgroundColor: palette.background, flex: 1, gap: 12, justifyContent: "center" }}>
+      <ActivityIndicator color={palette.primaryStrong} size="large" />
+      <Text style={{ color: palette.textMuted, fontSize: 14, fontWeight: "700" }}>Cargando tu ficha medica...</Text>
+    </View>
+  );
+}
+
 export function AppNavigator() {
-  const { user } = useAppState();
+  const { user, patients } = useAppState();
+  const isPatient = user?.role === "patient";
+  const patientProfile = isPatient ? patients[0] ?? null : null;
+  const patientLoading = isPatient && patientProfile == null;
+  const patientNeedsOnboarding = isPatient && patientProfile != null && !patientProfile.profileCompleted;
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -155,8 +169,11 @@ export function AppNavigator() {
           <Stack.Screen component={CedulaAccessScreen} name="CedulaAccess" />
           <Stack.Screen component={PublicQRAccessScreen} name="PublicQRAccess" />
         </>
-      ) : null}
-      {user ? (
+      ) : patientLoading ? (
+        <Stack.Screen component={PatientLoadingScreen} name="PatientLoading" />
+      ) : patientNeedsOnboarding ? (
+        <Stack.Screen component={PatientOnboardingScreen} name="PatientOnboarding" />
+      ) : (
         <>
           <Stack.Screen name="Main">{() => <RoleTabs role={user.role} />}</Stack.Screen>
           <Stack.Screen component={AppointmentDetailScreen} name="AppointmentDetail" />
@@ -170,7 +187,7 @@ export function AppNavigator() {
           <Stack.Screen component={QRScannerScreen} name="QRScanner" />
           <Stack.Screen component={QRScreen} name="AppointmentQR" />
         </>
-      ) : null}
+      )}
     </Stack.Navigator>
   );
 }
