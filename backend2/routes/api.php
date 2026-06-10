@@ -5,7 +5,9 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DoctorProfileController;
+use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\MedicalRecordController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\UserController;
@@ -29,6 +31,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me/patient', [PatientController::class, 'me']);
     Route::put('/me/patient', [PatientController::class, 'completeProfile']);
     Route::get('/users', [UserController::class, 'index']);
+    Route::post('/device-tokens', [DeviceTokenController::class, 'store']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'read']);
 
     Route::get('/patients', [PatientController::class, 'index']);
     Route::post('/patients', [PatientController::class, 'store']);

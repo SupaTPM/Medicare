@@ -16,6 +16,9 @@ import {
   loadDoctorProfile,
   updateDoctorProfileRequest,
   UpdateDoctorProfilePayload,
+  loadNotifications,
+  markNotificationReadRequest,
+  registerDeviceTokenRequest,
   buildAlerts,
   loadAppointments,
   loadScheduleDoctors,
@@ -36,8 +39,10 @@ import {
   saveDeviceRegistration,
   syncDeviceRegistration
 } from "@/services/deviceRegistration";
+import { getExpoPushToken } from "@/services/pushNotifications";
 import {
   AlertItem,
+  AppNotification,
   Appointment,
   AvailabilitySlot,
   DevicePatientRegistration,
@@ -51,6 +56,7 @@ import {
 
 type AppState = {
   alerts: AlertItem[];
+  appNotifications: AppNotification[];
   appointments: Appointment[];
   doctorProfiles: UserProfile[];
   deviceRegistration: DevicePatientRegistration | null;
@@ -79,6 +85,7 @@ type AppState = {
   registerDevicePatient: (cedula: string, fullName: string) => Promise<boolean>;
   retryDeviceSync: () => Promise<void>;
   searchPatients: (query: string) => Promise<Patient[]>;
+  markNotificationRead: (notificationId: string) => Promise<void>;
   updateDoctorProfile: (payload: UpdateDoctorProfilePayload) => Promise<boolean>;
 };
 
@@ -96,6 +103,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
   const [documents, setDocuments] = useState<MedicalDocument[]>([]);
+  const [appNotifications, setAppNotifications] = useState<AppNotification[]>([]);
 
   const doctorProfiles = useMemo(() => users.filter((item) => item.role === "doctor"), [users]);
   const alerts = useMemo(() => buildAlerts(patients), [patients]);
@@ -136,6 +144,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsSyncing(true);
 
     try {
+      void registerPushToken(nextToken);
       const sessionUser = nextUser ?? user;
       const isPatientSession = sessionUser?.role === "patient";
       let resolvedDoctorUser: UserProfile | null = null;
@@ -152,6 +161,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setAppointments([]);
           setMedicalRecords([]);
           setDocuments([]);
+          setAppNotifications(await loadNotifications(nextToken));
           return;
         }
       }
@@ -174,9 +184,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       const loadedAppointments = await loadAppointments(nextToken, resolvedUsers);
 
-      const [loadedRecords, loadedDocuments] = await Promise.all([
+      const [loadedRecords, loadedDocuments, loadedNotifications] = await Promise.all([
         Promise.all(loadedPatients.map((patient) => loadPatientRecords(nextToken, patient.id))).then((items) => items.flat()),
-        Promise.all(loadedPatients.map((patient) => loadPatientDocuments(nextToken, patient.id))).then((items) => items.flat())
+        Promise.all(loadedPatients.map((patient) => loadPatientDocuments(nextToken, patient.id))).then((items) => items.flat()),
+        loadNotifications(nextToken)
       ]);
 
       setUsers(resolvedUsers);
@@ -184,8 +195,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setAppointments(loadedAppointments);
       setMedicalRecords(loadedRecords);
       setDocuments(loadedDocuments);
+      setAppNotifications(loadedNotifications);
     } finally {
       setIsSyncing(false);
+    }
+  }
+
+  async function registerPushToken(nextToken: string) {
+    try {
+      const expoToken = await getExpoPushToken();
+
+      if (!expoToken) {
+        return;
+      }
+
+      await registerDeviceTokenRequest(nextToken, {
+        token: expoToken,
+        platform: "expo"
+      });
+    } catch {
     }
   }
 
@@ -427,6 +455,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ? await createAppointmentRequest(token, payload, users)
         : await createPublicAppointmentRequest(payload, users);
       setAppointments((currentAppointments) => [createdAppointment, ...currentAppointments]);
+      if (token) {
+        setAppNotifications(await loadNotifications(token));
+      }
       setAuthError(null);
       return createdAppointment;
     } catch (error) {
@@ -475,6 +506,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function markNotificationRead(notificationId: string) {
+    if (!token) {
+      return;
+    }
+
+    try {
+      const updatedNotification = await markNotificationReadRequest(token, notificationId);
+      setAppNotifications((currentNotifications) => currentNotifications.map((notification) => (
+        notification.id === updatedNotification.id ? updatedNotification : notification
+      )));
+    } catch {
+    }
+  }
+
   function logout() {
     setAuthError(null);
     setToken(null);
@@ -484,12 +529,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAppointments([]);
     setMedicalRecords([]);
     setDocuments([]);
+    setAppNotifications([]);
     void clearAuthSession();
   }
 
   const value = useMemo<AppState>(
     () => ({
       alerts,
+      appNotifications,
       appointments,
       doctorProfiles,
       deviceRegistration,
@@ -518,9 +565,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       registerDevicePatient,
       retryDeviceSync,
       searchPatients,
+      markNotificationRead,
       updateDoctorProfile
     }),
-    [alerts, appointments, authError, deviceRegistration, documents, doctorProfiles, isReady, isSyncing, medicalRecords, patients, users, user, token]
+    [alerts, appNotifications, appointments, authError, deviceRegistration, documents, doctorProfiles, isReady, isSyncing, medicalRecords, patients, users, user, token]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

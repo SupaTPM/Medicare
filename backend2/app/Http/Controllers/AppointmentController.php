@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Services\NotificationService;
 
 class AppointmentController extends Controller
 {
@@ -52,6 +53,7 @@ class AppointmentController extends Controller
         }
 
         $appointment = $this->createAppointmentFromData($data);
+        app(NotificationService::class)->notifyAppointmentCreated($appointment);
 
         return response()->json($appointment->load(['patient', 'availabilitySlot', 'doctor.doctorProfile']), 201);
     }
@@ -69,6 +71,7 @@ class AppointmentController extends Controller
             ...$data,
             'status' => AppointmentStatus::Pending->value,
         ]);
+        app(NotificationService::class)->notifyAppointmentCreated($appointment);
 
         return response()->json($appointment->load(['patient', 'availabilitySlot', 'doctor.doctorProfile']), 201);
     }
@@ -124,6 +127,7 @@ class AppointmentController extends Controller
             'observations' => ['nullable', 'string'],
         ]);
 
+        $previousStatus = $appointment->status;
         $appointment->update($data);
 
         return response()->json($appointment->refresh());
@@ -147,6 +151,10 @@ class AppointmentController extends Controller
             };
 
             $appointment->availabilitySlot->update(['status' => $slotStatus]);
+        }
+
+        if ($previousStatus !== $appointment->status) {
+            app(NotificationService::class)->notifyAppointmentStatusChanged($appointment, $previousStatus);
         }
 
         return response()->json($appointment->refresh());

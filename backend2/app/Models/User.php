@@ -43,4 +43,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(DoctorAvailabilitySlot::class, 'doctor_id');
     }
+
+    public function deviceTokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
+    public function appNotifications(): HasMany
+    {
+        return $this->hasMany(AppNotification::class);
+    }
 }

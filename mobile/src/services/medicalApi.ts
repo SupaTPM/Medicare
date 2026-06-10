@@ -1,6 +1,7 @@
 import { API_URL, apiMultipartRequest, apiRequest } from "@/services/api";
 import {
   AlertItem,
+  AppNotification,
   Appointment,
   AppointmentStatus,
   AvailabilitySlot,
@@ -98,6 +99,16 @@ type ApiMedicalDocument = {
   uploaded_by?: number;
 };
 
+type ApiNotification = {
+  id: number;
+  appointment_id?: number | null;
+  type: string;
+  title: string;
+  body: string;
+  read_at?: string | null;
+  created_at?: string;
+};
+
 type ApiAuthSession = {
   token: string;
   user: ApiUser;
@@ -171,6 +182,12 @@ export type UpdateDoctorProfilePayload = {
     name: string;
     type: string;
   };
+};
+
+export type RegisterDeviceTokenPayload = {
+  token: string;
+  platform?: string;
+  device_name?: string;
 };
 
 async function appendUploadFile(formData: FormData, fieldName: string, file: NonNullable<UpdateDoctorProfilePayload["profilePhoto"]>) {
@@ -361,6 +378,18 @@ export function mapMedicalDocument(document: ApiMedicalDocument): MedicalDocumen
   };
 }
 
+function mapNotification(notification: ApiNotification): AppNotification {
+  return {
+    id: String(notification.id),
+    appointmentId: notification.appointment_id ? String(notification.appointment_id) : undefined,
+    type: notification.type,
+    title: notification.title,
+    body: notification.body,
+    readAt: notification.read_at ?? undefined,
+    createdAt: notification.created_at ?? new Date().toISOString()
+  };
+}
+
 export async function loginRequest(email: string, password: string) {
   const response = await apiRequest<LoginResponse>("/login", {
     method: "POST",
@@ -417,6 +446,28 @@ export async function completePatientProfileRequest(token: string, payload: Comp
 export async function loadUsers(token: string) {
   const users = await apiRequest<ApiUser[]>("/users", { token });
   return users.map(mapUser);
+}
+
+export async function registerDeviceTokenRequest(token: string, payload: RegisterDeviceTokenPayload) {
+  return apiRequest("/device-tokens", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function loadNotifications(token: string) {
+  const notifications = await apiRequest<ApiNotification[]>("/notifications", { token });
+  return notifications.map(mapNotification);
+}
+
+export async function markNotificationReadRequest(token: string, notificationId: string) {
+  const notification = await apiRequest<ApiNotification>(`/notifications/${notificationId}/read`, {
+    method: "POST",
+    token
+  });
+
+  return mapNotification(notification);
 }
 
 export async function loadScheduleSpecialties(token: string) {

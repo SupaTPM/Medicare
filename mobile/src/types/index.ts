@@ -129,3 +129,13 @@ export type AlertItem = {
   title: string;
   body: string;
 };
+
+export type AppNotification = {
+  id: string;
+  appointmentId?: string;
+  type: string;
+  title: string;
+  body: string;
+  readAt?: string;
+  createdAt: string;
+};
