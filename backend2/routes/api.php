@@ -4,6 +4,7 @@ use App\Http\Controllers\AIController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\DoctorProfileController;
 use App\Http\Controllers\MedicalRecordController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\ScheduleController;
@@ -17,11 +18,14 @@ Route::post('/patients/cedula-login', [PatientController::class, 'cedulaLogin'])
 Route::post('/appointments/public', [AppointmentController::class, 'publicStore']);
 Route::get('/schedule/specialties', [ScheduleController::class, 'specialties']);
 Route::get('/schedule/doctors', [ScheduleController::class, 'doctors']);
+Route::get('/schedule/doctors/{doctor}/profile', [DoctorProfileController::class, 'show']);
 Route::get('/schedule/doctors/{doctor}/availability', [ScheduleController::class, 'availability']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [AuthController::class, 'profile']);
+    Route::get('/me/doctor-profile', [DoctorProfileController::class, 'me']);
+    Route::post('/doctors/{doctor}/profile', [DoctorProfileController::class, 'update']);
     Route::get('/me/patient', [PatientController::class, 'me']);
     Route::put('/me/patient', [PatientController::class, 'completeProfile']);
     Route::get('/users', [UserController::class, 'index']);

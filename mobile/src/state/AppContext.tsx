@@ -13,6 +13,9 @@ import {
   CompletePatientProfilePayload,
   loginWithCedulaRequest,
   loadDoctorAvailability,
+  loadDoctorProfile,
+  updateDoctorProfileRequest,
+  UpdateDoctorProfilePayload,
   buildAlerts,
   loadAppointments,
   loadScheduleDoctors,
@@ -64,6 +67,7 @@ type AppState = {
   createPatient: (payload: CreatePatientPayload) => Promise<boolean>;
   completePatientProfile: (payload: CompletePatientProfilePayload) => Promise<boolean>;
   getAvailableSlots: (doctorId: string) => Promise<AvailabilitySlot[]>;
+  getDoctorProfile: (doctorId: string) => Promise<DoctorOption | null>;
   getDoctorsBySpecialty: (specialty: string) => Promise<DoctorOption[]>;
   getSpecialties: () => Promise<string[]>;
   login: (email: string, password: string) => Promise<boolean>;
@@ -75,6 +79,7 @@ type AppState = {
   registerDevicePatient: (cedula: string, fullName: string) => Promise<boolean>;
   retryDeviceSync: () => Promise<void>;
   searchPatients: (query: string) => Promise<Patient[]>;
+  updateDoctorProfile: (payload: UpdateDoctorProfilePayload) => Promise<boolean>;
 };
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -133,6 +138,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const sessionUser = nextUser ?? user;
       const isPatientSession = sessionUser?.role === "patient";
+      let resolvedDoctorUser: UserProfile | null = null;
+
+      if (sessionUser?.role === "doctor") {
+        const doctorProfile = await loadDoctorProfile(nextToken, sessionUser.id);
+        resolvedDoctorUser = doctorProfile;
+        setUser(doctorProfile);
+        await saveAuthSession({ token: nextToken, user: doctorProfile });
+
+        if (!doctorProfile.doctorProfileCompleted) {
+          setUsers([doctorProfile]);
+          setPatients([]);
+          setAppointments([]);
+          setMedicalRecords([]);
+          setDocuments([]);
+          return;
+        }
+      }
 
       const usersPromise = isPatientSession
         ? Promise.resolve<UserProfile[]>([])
@@ -142,14 +164,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         : loadPatients(nextToken);
 
       const [loadedUsers, loadedPatients] = await Promise.all([usersPromise, patientsPromise]);
-      const loadedAppointments = await loadAppointments(nextToken, loadedUsers);
+      let resolvedUsers = loadedUsers;
+
+      if (resolvedDoctorUser) {
+        if (!resolvedUsers.some((item) => item.id === resolvedDoctorUser?.id)) {
+          resolvedUsers = [resolvedDoctorUser, ...resolvedUsers];
+        }
+      }
+
+      const loadedAppointments = await loadAppointments(nextToken, resolvedUsers);
 
       const [loadedRecords, loadedDocuments] = await Promise.all([
         Promise.all(loadedPatients.map((patient) => loadPatientRecords(nextToken, patient.id))).then((items) => items.flat()),
         Promise.all(loadedPatients.map((patient) => loadPatientDocuments(nextToken, patient.id))).then((items) => items.flat())
       ]);
 
-      setUsers(loadedUsers);
+      setUsers(resolvedUsers);
       setPatients(loadedPatients);
       setAppointments(loadedAppointments);
       setMedicalRecords(loadedRecords);
@@ -380,6 +410,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return loadDoctorAvailability(token ?? "", doctorId);
   }
 
+  async function getDoctorProfile(doctorId: string) {
+    try {
+      const doctor = await loadDoctorProfile(token ?? "", doctorId);
+      setAuthError(null);
+      return doctor;
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "No se pudo cargar el perfil del medico.");
+      return null;
+    }
+  }
+
   async function createAppointment(payload: CreateAppointmentPayload) {
     try {
       const createdAppointment = token
@@ -408,6 +449,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return true;
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "No se pudo crear el registro medico.");
+      return false;
+    }
+  }
+
+  async function updateDoctorProfile(payload: UpdateDoctorProfilePayload) {
+    if (!token || !user || user.role !== "doctor") {
+      setAuthError("Inicia sesion como doctor para completar el perfil.");
+      return false;
+    }
+
+    try {
+      const updatedDoctor = await updateDoctorProfileRequest(token, user.id, payload);
+      setUser(updatedDoctor);
+      setUsers((currentUsers) => {
+        const others = currentUsers.filter((item) => item.id !== updatedDoctor.id);
+        return [updatedDoctor, ...others];
+      });
+      await saveAuthSession({ token, user: updatedDoctor });
+      setAuthError(null);
+      return true;
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "No se pudo completar el perfil medico.");
       return false;
     }
   }
@@ -443,6 +506,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createPatient,
       completePatientProfile,
       getAvailableSlots,
+      getDoctorProfile,
       getDoctorsBySpecialty,
       getSpecialties,
       login,
@@ -453,7 +517,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       refreshData,
       registerDevicePatient,
       retryDeviceSync,
-      searchPatients
+      searchPatients,
+      updateDoctorProfile
     }),
     [alerts, appointments, authError, deviceRegistration, documents, doctorProfiles, isReady, isSyncing, medicalRecords, patients, users, user, token]
   );

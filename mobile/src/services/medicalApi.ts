@@ -1,4 +1,4 @@
-import { apiRequest } from "@/services/api";
+import { API_URL, apiMultipartRequest, apiRequest } from "@/services/api";
 import {
   AlertItem,
   Appointment,
@@ -21,10 +21,16 @@ type ApiUser = {
   name: string;
   email: string;
   role: UserRole;
+  profile_completed?: boolean;
   doctor_profile?: {
     specialty: string;
     license_code?: string | null;
     phone?: string | null;
+    profile_photo_url?: string | null;
+    bio?: string | null;
+    education?: string | null;
+    experience_years?: number | null;
+    languages?: string[] | null;
   } | null;
 };
 
@@ -152,6 +158,38 @@ export type CreateMedicalRecordPayload = {
   recommendations?: string;
 };
 
+export type UpdateDoctorProfilePayload = {
+  specialty: string;
+  license_code: string;
+  phone: string;
+  bio: string;
+  education: string;
+  experience_years: number;
+  languages: string[];
+  profilePhoto?: {
+    uri: string;
+    name: string;
+    type: string;
+  };
+};
+
+async function appendUploadFile(formData: FormData, fieldName: string, file: NonNullable<UpdateDoctorProfilePayload["profilePhoto"]>) {
+  if (file.uri.startsWith("blob:") || file.uri.startsWith("data:")) {
+    const response = await fetch(file.uri);
+    const blob = await response.blob();
+
+    if (typeof File !== "undefined") {
+      formData.append(fieldName, new File([blob], file.name, { type: file.type }));
+      return;
+    }
+
+    formData.append(fieldName, blob, file.name);
+    return;
+  }
+
+  formData.append(fieldName, file as unknown as Blob);
+}
+
 function formatDate(value?: string | null) {
   if (!value) {
     return "Sin fecha";
@@ -192,6 +230,20 @@ function calculateAge(value?: string | null) {
   return Math.max(age, 0);
 }
 
+function normalizeMediaUrl(value?: string | null) {
+  if (!value) {
+    return undefined;
+  }
+
+  const apiOrigin = API_URL.replace(/\/api$/, "");
+
+  if (value.startsWith("/")) {
+    return `${apiOrigin}${value}`;
+  }
+
+  return value.replace(/^http:\/\/(localhost|127\.0\.0\.1):8000/, apiOrigin);
+}
+
 export function mapUser(user: ApiUser): UserProfile {
   return {
     id: String(user.id),
@@ -199,14 +251,29 @@ export function mapUser(user: ApiUser): UserProfile {
     email: user.email,
     role: user.role,
     subtitle: user.doctor_profile?.specialty ?? user.role,
-    specialty: user.doctor_profile?.specialty
+    specialty: user.doctor_profile?.specialty,
+    profilePhotoUrl: normalizeMediaUrl(user.doctor_profile?.profile_photo_url),
+    licenseCode: user.doctor_profile?.license_code ?? undefined,
+    phone: user.doctor_profile?.phone ?? undefined,
+    bio: user.doctor_profile?.bio ?? undefined,
+    education: user.doctor_profile?.education ?? undefined,
+    experienceYears: user.doctor_profile?.experience_years ?? undefined,
+    languages: user.doctor_profile?.languages ?? [],
+    doctorProfileCompleted: user.profile_completed
   };
 }
 
 function mapDoctor(user: ApiUser): DoctorOption {
   return {
     ...mapUser(user),
-    specialty: user.doctor_profile?.specialty ?? "Sin especialidad"
+    specialty: user.doctor_profile?.specialty ?? "Sin especialidad",
+    licenseCode: user.doctor_profile?.license_code ?? undefined,
+    phone: user.doctor_profile?.phone ?? undefined,
+    bio: user.doctor_profile?.bio ?? undefined,
+    education: user.doctor_profile?.education ?? undefined,
+    experienceYears: user.doctor_profile?.experience_years ?? undefined,
+    languages: user.doctor_profile?.languages ?? [],
+    profilePhotoUrl: normalizeMediaUrl(user.doctor_profile?.profile_photo_url)
   };
 }
 
@@ -251,8 +318,10 @@ export function mapAppointment(appointment: ApiAppointment, users: UserProfile[]
 
   return {
     id: String(appointment.id),
+    doctorId: appointment.doctor_id ? String(appointment.doctor_id) : appointment.doctor ? String(appointment.doctor.id) : undefined,
     patientName: appointment.patient?.full_name ?? `Paciente #${appointment.patient_id}`,
     doctorName: doctor?.name ?? "Doctor pendiente",
+    doctorPhotoUrl: doctor?.profilePhotoUrl,
     specialty: appointment.specialty,
     dateLabel: formatDate(appointment.scheduled_at),
     timeLabel: formatTime(appointment.scheduled_at),
@@ -360,6 +429,37 @@ export async function loadScheduleDoctors(token: string, specialty: string) {
     token ? { token } : {}
   );
   return doctors.map(mapDoctor);
+}
+
+export async function loadDoctorProfile(token: string, doctorId: string) {
+  const doctor = await apiRequest<ApiUser>(
+    `/schedule/doctors/${doctorId}/profile`,
+    token ? { token } : {}
+  );
+
+  return mapDoctor(doctor);
+}
+
+export async function updateDoctorProfileRequest(token: string, doctorId: string, payload: UpdateDoctorProfilePayload) {
+  const formData = new FormData();
+
+  formData.append("specialty", payload.specialty);
+  formData.append("license_code", payload.license_code);
+  formData.append("phone", payload.phone);
+  formData.append("bio", payload.bio);
+  formData.append("education", payload.education);
+  formData.append("experience_years", String(payload.experience_years));
+
+  payload.languages.forEach((language, index) => {
+    formData.append(`languages[${index}]`, language);
+  });
+
+  if (payload.profilePhoto) {
+    await appendUploadFile(formData, "profile_photo", payload.profilePhoto);
+  }
+
+  const doctor = await apiMultipartRequest<ApiUser>(`/doctors/${doctorId}/profile`, formData, token);
+  return mapDoctor(doctor);
 }
 
 export async function loadDoctorAvailability(token: string, doctorId: string) {

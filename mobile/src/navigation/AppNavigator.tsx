@@ -12,6 +12,8 @@ import { CreateAppointmentScreen } from "@/screens/CreateAppointmentScreen";
 import { CreateMedicalRecordScreen } from "@/screens/CreateMedicalRecordScreen";
 import { CreatePatientScreen } from "@/screens/CreatePatientScreen";
 import { DoctorAccessScreen } from "@/screens/DoctorAccessScreen";
+import { DoctorOnboardingScreen } from "@/screens/DoctorOnboardingScreen";
+import { DoctorProfileScreen } from "@/screens/DoctorProfileScreen";
 import { DocumentsScreen } from "@/screens/DocumentsScreen";
 import { HomeScreen } from "@/screens/HomeScreen";
 import { LoginScreen } from "@/screens/LoginScreen";
@@ -176,9 +178,11 @@ function PatientLoadingScreen() {
 export function AppNavigator() {
   const { user, patients } = useAppState();
   const isPatient = user?.role === "patient";
+  const isDoctor = user?.role === "doctor";
   const patientProfile = isPatient ? patients[0] ?? null : null;
   const patientLoading = isPatient && patientProfile == null;
   const patientNeedsOnboarding = isPatient && patientProfile != null && !patientProfile.profileCompleted;
+  const doctorNeedsOnboarding = isDoctor && !user?.doctorProfileCompleted;
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -194,6 +198,8 @@ export function AppNavigator() {
         <Stack.Screen component={PatientLoadingScreen} name="PatientLoading" />
       ) : patientNeedsOnboarding ? (
         <Stack.Screen component={PatientOnboardingScreen} name="PatientOnboarding" />
+      ) : doctorNeedsOnboarding ? (
+        <Stack.Screen component={DoctorOnboardingScreen} name="DoctorOnboarding" />
       ) : (
         <>
           <Stack.Screen name="Main">{() => <RoleTabs role={user.role} />}</Stack.Screen>
@@ -201,6 +207,7 @@ export function AppNavigator() {
           <Stack.Screen component={CreateAppointmentScreen} name="CreateAppointment" />
           <Stack.Screen component={CreateMedicalRecordScreen} name="CreateMedicalRecord" />
           <Stack.Screen component={CreatePatientScreen} name="CreatePatient" />
+          <Stack.Screen component={DoctorProfileScreen} name="DoctorProfile" />
           <Stack.Screen component={AIAssistantScreen} name="AIAssistantStack" />
           <Stack.Screen component={DocumentsScreen} name="PatientDocuments" />
           <Stack.Screen component={NotificationsScreen} name="Notifications" />

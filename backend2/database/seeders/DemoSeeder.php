@@ -23,6 +23,10 @@ class DemoSeeder extends Seeder
             'specialty' => 'Cardiologia',
             'license_code' => 'MED-001',
             'phone' => '0990000001',
+            'bio' => 'Cardiologo clinico enfocado en prevencion, control de hipertension y seguimiento de pacientes con riesgo cardiovascular.',
+            'education' => 'Universidad Central del Ecuador · Cardiologia clinica',
+            'experience_years' => 12,
+            'languages' => ['Español', 'Ingles'],
         ]);
 
         $generalDoctor = User::updateOrCreate(['email' => 'luis@medflow.test'], [
@@ -35,6 +39,10 @@ class DemoSeeder extends Seeder
             'specialty' => 'Medicina general',
             'license_code' => 'MED-002',
             'phone' => '0990000002',
+            'bio' => 'Medico general con enfoque familiar, medicina preventiva y continuidad del cuidado para pacientes adultos.',
+            'education' => 'Universidad de Guayaquil · Medicina familiar',
+            'experience_years' => 8,
+            'languages' => ['Español'],
         ]);
 
         $pediatrician = User::updateOrCreate(['email' => 'elena@medflow.test'], [
@@ -47,6 +55,10 @@ class DemoSeeder extends Seeder
             'specialty' => 'Pediatria',
             'license_code' => 'MED-003',
             'phone' => '0990000003',
+            'bio' => 'Pediatra orientada al crecimiento saludable, vacunas, controles infantiles y acompañamiento a familias.',
+            'education' => 'Pontificia Universidad Catolica del Ecuador · Pediatria',
+            'experience_years' => 10,
+            'languages' => ['Español', 'Ingles'],
         ]);
 
         User::updateOrCreate(['email' => 'recepcion@medflow.test'], [

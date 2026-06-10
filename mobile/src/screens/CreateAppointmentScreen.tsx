@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
 
@@ -35,21 +35,40 @@ function OptionChip({
 function DoctorCard({
   active,
   doctor,
-  onPress
+  onPress,
+  onProfilePress
 }: {
   active: boolean;
   doctor: DoctorOption;
   onPress: () => void;
+  onProfilePress: () => void;
 }) {
+  const initials = doctor.name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
   return (
     <Pressable onPress={onPress} style={[styles.doctorCard, active ? styles.doctorCardActive : null]}>
       <View style={styles.doctorIcon}>
-        <Ionicons color={active ? "#ffffff" : palette.primaryStrong} name="medkit-outline" size={20} />
+        {doctor.profilePhotoUrl ? (
+          <Image source={{ uri: doctor.profilePhotoUrl }} style={styles.doctorPhoto} />
+        ) : (
+          <Text style={[styles.doctorInitials, active ? styles.doctorInitialsActive : null]}>{initials || "MD"}</Text>
+        )}
       </View>
       <View style={styles.doctorCopy}>
         <Text style={styles.doctorName}>{doctor.name}</Text>
-        <Text style={styles.doctorMeta}>{doctor.specialty}</Text>
+        <Text style={styles.doctorMeta}>
+          {doctor.specialty}
+          {doctor.experienceYears ? ` · ${doctor.experienceYears} años` : ""}
+        </Text>
       </View>
+      <Pressable onPress={onProfilePress} style={styles.profileButton}>
+        <Text style={styles.profileButtonText}>Perfil</Text>
+      </Pressable>
       {active ? <Ionicons color={palette.primaryStrong} name="checkmark-circle" size={22} /> : null}
     </Pressable>
   );
@@ -436,6 +455,7 @@ export function CreateAppointmentScreen({ navigation }: any) {
             doctor={doctor}
             key={doctor.id}
             onPress={() => setSelectedDoctor(doctor)}
+            onProfilePress={() => navigation.navigate("DoctorProfile", { doctorId: doctor.id, doctor })}
           />
         ))}
       </View>
@@ -521,6 +541,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 42
   },
+  doctorInitials: {
+    color: palette.primaryStrong,
+    fontSize: 13,
+    fontWeight: "900"
+  },
+  doctorInitialsActive: {
+    color: palette.primaryDeep
+  },
   doctorMeta: {
     color: palette.textMuted,
     fontSize: 12,
@@ -531,6 +559,11 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 15,
     fontWeight: "900"
+  },
+  doctorPhoto: {
+    borderRadius: 14,
+    height: 42,
+    width: 42
   },
   error: {
     color: palette.danger,
@@ -568,6 +601,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "900",
     textTransform: "uppercase"
+  },
+  profileButton: {
+    backgroundColor: "#ffffff",
+    borderColor: palette.borderSoft,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs
+  },
+  profileButtonText: {
+    color: palette.primaryStrong,
+    fontSize: 12,
+    fontWeight: "900"
   },
   modalBackdrop: {
     alignItems: "center",

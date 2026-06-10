@@ -17,7 +17,7 @@ class AppointmentController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = Appointment::with(['patient', 'availabilitySlot', 'doctor'])->latest('scheduled_at');
+        $query = Appointment::with(['patient', 'availabilitySlot', 'doctor.doctorProfile'])->latest('scheduled_at');
 
         if ($user?->role === UserRole::Patient->value && $user->patient) {
             $query->where('patient_id', $user->patient->id);
@@ -53,7 +53,7 @@ class AppointmentController extends Controller
 
         $appointment = $this->createAppointmentFromData($data);
 
-        return response()->json($appointment->load(['patient', 'availabilitySlot', 'doctor']), 201);
+        return response()->json($appointment->load(['patient', 'availabilitySlot', 'doctor.doctorProfile']), 201);
     }
 
     public function publicStore(Request $request): JsonResponse
@@ -70,7 +70,7 @@ class AppointmentController extends Controller
             'status' => AppointmentStatus::Pending->value,
         ]);
 
-        return response()->json($appointment->load(['patient', 'availabilitySlot', 'doctor']), 201);
+        return response()->json($appointment->load(['patient', 'availabilitySlot', 'doctor.doctorProfile']), 201);
     }
 
     private function createAppointmentFromData(array $data): Appointment
@@ -109,7 +109,7 @@ class AppointmentController extends Controller
     {
         $this->authorizeAppointmentAccess(request()->user(), $appointment);
 
-        return response()->json($appointment->load(['patient', 'medicalRecord', 'qrToken', 'availabilitySlot', 'doctor']));
+        return response()->json($appointment->load(['patient', 'medicalRecord', 'qrToken', 'availabilitySlot', 'doctor.doctorProfile']));
     }
 
     public function update(Request $request, Appointment $appointment): JsonResponse

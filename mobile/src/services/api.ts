@@ -23,11 +23,29 @@ type RequestOptions = RequestInit & {
   token?: string;
 };
 
+type ApiErrorPayload = {
+  message?: string;
+  errors?: Record<string, string[]>;
+};
+
 // Si el backend no responde (apagado, IP incorrecta, firewall bloqueando el
 // puerto), fetch() puede quedarse colgado indefinidamente. Forzamos un
 // timeout para que el error aparezca rapido en vez de dejar la pantalla
 // "cargando" para siempre.
 const REQUEST_TIMEOUT_MS = 10000;
+const MULTIPART_REQUEST_TIMEOUT_MS = 60000;
+
+function getApiErrorMessage(payload: ApiErrorPayload, fallback: string) {
+  if (payload.errors) {
+    const firstValidationError = Object.values(payload.errors).flat()[0];
+
+    if (firstValidationError) {
+      return firstValidationError;
+    }
+  }
+
+  return payload.message ?? fallback;
+}
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}) {
   const headers: Record<string, string> = {
@@ -68,7 +86,53 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}) 
 
     try {
       const payload = await response.json();
-      message = payload.message ?? message;
+      message = getApiErrorMessage(payload, message);
+    } catch {
+    }
+
+    throw new Error(message);
+  }
+
+  return (await response.json()) as T;
+}
+
+export async function apiMultipartRequest<T>(path: string, formData: FormData, token?: string) {
+  const headers: Record<string, string> = {
+    Accept: "application/json"
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), MULTIPART_REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method: "POST",
+      headers,
+      body: formData,
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`La carga del archivo tardó demasiado. Verifica que el backend siga encendido y vuelve a intentar.`);
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  if (!response.ok) {
+    let message = `API request failed with status ${response.status}`;
+
+    try {
+      const payload = await response.json();
+      message = getApiErrorMessage(payload, message);
     } catch {
     }
 

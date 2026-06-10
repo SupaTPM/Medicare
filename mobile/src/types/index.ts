@@ -19,10 +19,25 @@ export type UserProfile = {
   role: UserRole;
   subtitle: string;
   specialty?: string;
+  profilePhotoUrl?: string;
+  licenseCode?: string;
+  phone?: string;
+  bio?: string;
+  education?: string;
+  experienceYears?: number;
+  languages?: string[];
+  doctorProfileCompleted?: boolean;
 };
 
 export type DoctorOption = UserProfile & {
   specialty: string;
+  licenseCode?: string;
+  phone?: string;
+  bio?: string;
+  education?: string;
+  experienceYears?: number;
+  languages: string[];
+  profilePhotoUrl?: string;
 };
 
 export type AvailabilitySlot = {
@@ -77,8 +92,10 @@ export type Patient = {
 
 export type Appointment = {
   id: string;
+  doctorId?: string;
   patientName: string;
   doctorName: string;
+  doctorPhotoUrl?: string;
   specialty: string;
   dateLabel: string;
   timeLabel: string;

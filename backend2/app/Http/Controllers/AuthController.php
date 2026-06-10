@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Http\Resources\DoctorProfileResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -23,7 +24,7 @@ class AuthController extends Controller
 
         return response()->json([
             'token' => $user->createToken('mobile')->plainTextToken,
-            'user' => $user,
+            'user' => $this->userPayload($user),
         ], 201);
     }
 
@@ -42,13 +43,13 @@ class AuthController extends Controller
 
         return response()->json([
             'token' => $user->createToken('mobile')->plainTextToken,
-            'user' => $user,
+            'user' => $this->userPayload($user),
         ]);
     }
 
     public function profile(Request $request): JsonResponse
     {
-        return response()->json($request->user());
+        return response()->json($this->userPayload($request->user()));
     }
 
     public function logout(Request $request): JsonResponse
@@ -56,5 +57,14 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()?->delete();
 
         return response()->json(['message' => 'Logged out']);
+    }
+
+    private function userPayload(User $user): array
+    {
+        if ($user->role === 'doctor') {
+            return (new DoctorProfileResource($user->load('doctorProfile')))->resolve();
+        }
+
+        return $user->toArray();
     }
 }

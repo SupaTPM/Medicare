@@ -2,16 +2,16 @@
 node_modules/
 vendor/
 
-.agents/
-.claude/
-.codex
-
 
 
 # Environment and secrets
 .env
 .env.*
 !.env.example
+
+.agents/
+.claude/
+.codex/
 
 # Logs
 *.log

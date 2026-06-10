@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\DoctorAvailabilitySlot;
 use App\Models\DoctorProfile;
 use App\Models\User;
+use App\Http\Resources\DoctorProfileResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -36,7 +37,7 @@ class ScheduleController extends Controller
             ->orderBy('name')
             ->get();
 
-        return response()->json($doctors);
+        return response()->json(DoctorProfileResource::collection($doctors)->resolve());
     }
 
     public function availability(User $doctor): JsonResponse

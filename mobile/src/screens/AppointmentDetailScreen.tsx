@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
 
@@ -54,7 +54,11 @@ export function AppointmentDetailScreen({ route, navigation }: any) {
       <View style={styles.heroCard}>
         <View style={styles.heroTop}>
           <View style={styles.avatar}>
-            <Ionicons color="#ffffff" name="person" size={22} />
+            {appointment.doctorPhotoUrl ? (
+              <Image source={{ uri: appointment.doctorPhotoUrl }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons color="#ffffff" name="person" size={22} />
+            )}
           </View>
           <View style={styles.heroCopy}>
             <Text style={styles.heroName}>{appointment.patientName}</Text>
@@ -66,7 +70,14 @@ export function AppointmentDetailScreen({ route, navigation }: any) {
 
       <View style={styles.card}>
         <View style={styles.grid}>
-          <DetailItem icon="medkit-outline" label="Medico" value={appointment.doctorName} />
+          <Pressable
+            disabled={!appointment.doctorId}
+            onPress={() => navigation.navigate("DoctorProfile", { doctorId: appointment.doctorId })}
+            style={styles.detailPressable}
+          >
+            <DetailItem icon="medkit-outline" label="Medico" value={appointment.doctorName} />
+            {appointment.doctorId ? <Text style={styles.profileLink}>Ver perfil</Text> : null}
+          </Pressable>
           <DetailItem icon="calendar-outline" label="Fecha" value={appointment.dateLabel} />
           <DetailItem icon="time-outline" label="Hora" value={appointment.timeLabel} />
           <DetailItem icon="person-outline" label="Paciente" value={appointment.patientName} />
@@ -122,6 +133,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 48
   },
+  avatarImage: {
+    borderRadius: 24,
+    height: 48,
+    width: 48
+  },
   heroCopy: {
     flex: 1,
     gap: 2
@@ -156,6 +172,10 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     gap: spacing.sm
   },
+  detailPressable: {
+    flexBasis: "45%",
+    flexGrow: 1
+  },
   detailIcon: {
     alignItems: "center",
     backgroundColor: palette.primaryFaint,
@@ -183,6 +203,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     textTransform: "uppercase"
+  },
+  profileLink: {
+    color: palette.primaryStrong,
+    fontSize: 12,
+    fontWeight: "900",
+    marginLeft: 40,
+    marginTop: spacing.xs
   },
   value: {
     color: palette.text,
