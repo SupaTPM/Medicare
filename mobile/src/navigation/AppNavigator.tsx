@@ -1,4 +1,5 @@
 import React from "react";
+import { View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
@@ -58,19 +59,21 @@ function RoleTabs({ role }: { role: UserRole }) {
     headerShown: false,
     tabBarActiveTintColor: palette.primaryStrong,
     tabBarInactiveTintColor: palette.textMuted,
-    tabBarLabelStyle: {
-      fontSize: 11,
-      fontWeight: "800" as const,
-      paddingTop: 1
+    tabBarShowLabel: false,
+    tabBarItemStyle: {
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      paddingVertical: 8
     },
     tabBarStyle: {
       backgroundColor: palette.surface,
       borderTopColor: palette.borderSoft,
       borderTopWidth: 1,
       elevation: 10,
-      height: 76,
-      paddingTop: 9,
-      paddingBottom: 12,
+      height: 68,
+      paddingHorizontal: 14,
+      paddingTop: 8,
+      paddingBottom: 10,
       shadowColor: "#0b1f3a",
       shadowOffset: { width: 0, height: -8 },
       shadowOpacity: 0.08,
@@ -83,7 +86,20 @@ function RoleTabs({ role }: { role: UserRole }) {
       screenOptions={({ route }) => ({
         ...commonOptions,
         tabBarIcon: ({ color, focused }) => (
-          <Ionicons color={color} name={focused ? iconForRoute(route.name).replace("-outline", "") as keyof typeof Ionicons.glyphMap : iconForRoute(route.name)} size={focused ? 24 : 22} />
+          <View
+            style={{
+              alignItems: "center",
+              backgroundColor: focused ? palette.primaryFaint : "transparent",
+              borderColor: focused ? palette.surfaceAccent : "transparent",
+              borderRadius: 18,
+              borderWidth: 1,
+              height: 42,
+              justifyContent: "center",
+              width: 42
+            }}
+          >
+            <Ionicons color={color} name={focused ? iconForRoute(route.name).replace("-outline", "") as keyof typeof Ionicons.glyphMap : iconForRoute(route.name)} size={focused ? 24 : 22} />
+          </View>
         )
       })}
     >

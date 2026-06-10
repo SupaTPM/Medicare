@@ -10,7 +10,7 @@ import { softShadow } from "@/theme/shadows";
 import { spacing } from "@/theme/spacing";
 
 export function DoctorAccessScreen() {
-  const { authError, doctorProfiles, loginDoctor } = useAppState();
+  const { authError, doctorProfiles, isSyncing, loginDoctor } = useAppState();
   const [email, setEmail] = useState("doctor@medflow.test");
   const [password, setPassword] = useState("password123");
 
@@ -35,7 +35,12 @@ export function DoctorAccessScreen() {
             value={password}
           />
           {authError ? <Text style={styles.error}>{authError}</Text> : null}
-          <PrimaryButton icon="medkit-outline" label="Entrar como doctor" onPress={() => void loginDoctor(email, password)} />
+          <PrimaryButton
+            icon="medkit-outline"
+            label={isSyncing ? "Cargando expediente..." : "Entrar como doctor"}
+            loading={isSyncing}
+            onPress={() => void loginDoctor(email, password)}
+          />
         </View>
 
         <View style={styles.infoBlock}>

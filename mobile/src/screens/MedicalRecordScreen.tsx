@@ -3,18 +3,19 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { Screen } from "@/components/Screen";
 import { SectionTitle } from "@/components/SectionTitle";
+import { SkeletonList } from "@/components/Skeleton";
 import { useAppState } from "@/state/AppContext";
 import { cardShadow } from "@/theme/shadows";
 import { palette } from "@/theme/palette";
 import { spacing } from "@/theme/spacing";
 
 export function MedicalRecordScreen() {
-  const { medicalRecords } = useAppState();
+  const { isSyncing, medicalRecords } = useAppState();
 
   return (
     <Screen>
       <SectionTitle eyebrow="Historial" title="Registros clinicos" />
-      {medicalRecords.map((record) => (
+      {isSyncing ? <SkeletonList count={3} /> : medicalRecords.map((record) => (
         <View key={record.id} style={styles.card}>
           <Text style={styles.date}>{record.dateLabel}</Text>
           <Text style={styles.title}>{record.diagnosis}</Text>
@@ -23,6 +24,7 @@ export function MedicalRecordScreen() {
           <Text style={styles.note}>{record.notes}</Text>
         </View>
       ))}
+      {!isSyncing && !medicalRecords.length ? <Text style={styles.empty}>Aun no hay registros clinicos reales.</Text> : null}
     </Screen>
   );
 }
@@ -58,5 +60,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: palette.textMuted,
     marginTop: spacing.sm
+  },
+  empty: {
+    color: palette.textMuted,
+    fontSize: 14
   }
 });

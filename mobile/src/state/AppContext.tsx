@@ -131,6 +131,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   async function login(email: string, password: string) {
     try {
+      setIsSyncing(true);
       setAuthError(null);
       const response = await loginRequest(email.trim(), password);
       setToken(response.token);
@@ -139,6 +140,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return true;
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "No se pudo iniciar sesion.");
+      setIsSyncing(false);
       return false;
     }
   }

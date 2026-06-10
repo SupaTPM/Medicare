@@ -3,18 +3,19 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { Screen } from "@/components/Screen";
 import { SectionTitle } from "@/components/SectionTitle";
+import { SkeletonList } from "@/components/Skeleton";
 import { useAppState } from "@/state/AppContext";
 import { cardShadow } from "@/theme/shadows";
 import { palette } from "@/theme/palette";
 import { spacing } from "@/theme/spacing";
 
 export function DocumentsScreen() {
-  const { documents } = useAppState();
+  const { documents, isSyncing } = useAppState();
 
   return (
     <Screen>
       <SectionTitle eyebrow="Documentos" title="Archivos medicos" />
-      {documents.map((document) => (
+      {isSyncing ? <SkeletonList count={3} /> : documents.map((document) => (
         <View key={document.id} style={styles.card}>
           <Text style={styles.title}>{document.title}</Text>
           <Text style={styles.meta}>
@@ -23,6 +24,7 @@ export function DocumentsScreen() {
           <Text style={styles.meta}>Subido por {document.uploadedBy}</Text>
         </View>
       ))}
+      {!isSyncing && !documents.length ? <Text style={styles.empty}>Aun no hay documentos reales.</Text> : null}
     </Screen>
   );
 }
@@ -47,5 +49,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: palette.textMuted,
     marginBottom: spacing.xs
+  },
+  empty: {
+    color: palette.textMuted,
+    fontSize: 14
   }
 });

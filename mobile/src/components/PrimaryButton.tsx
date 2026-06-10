@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { palette } from "@/theme/palette";
@@ -11,6 +11,7 @@ export function PrimaryButton({
   onPress,
   disabled = false,
   icon,
+  loading = false,
   variant = "primary",
   style
 }: {
@@ -18,6 +19,7 @@ export function PrimaryButton({
   onPress?: () => void;
   disabled?: boolean;
   icon?: keyof typeof Ionicons.glyphMap;
+  loading?: boolean;
   variant?: "primary" | "secondary" | "ghost";
   style?: ViewStyle;
 }) {
@@ -26,17 +28,19 @@ export function PrimaryButton({
 
   return (
     <Pressable
-      disabled={disabled}
+      disabled={disabled || loading}
       onPress={onPress}
       style={[
         styles.button,
         isGhost ? styles.ghostButton : isSecondary ? styles.secondaryButton : styles.primaryButton,
-        disabled ? styles.disabled : null,
+        disabled || loading ? styles.disabled : null,
         style
       ]}
     >
       <View style={styles.content}>
-        {icon ? (
+        {loading ? (
+          <ActivityIndicator color={isSecondary || isGhost ? palette.primaryStrong : "#ffffff"} size="small" />
+        ) : icon ? (
           <Ionicons
             color={isSecondary || isGhost ? palette.primaryStrong : "#ffffff"}
             name={icon}

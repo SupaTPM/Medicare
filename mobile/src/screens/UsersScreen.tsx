@@ -3,25 +3,26 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { Screen } from "@/components/Screen";
 import { SectionTitle } from "@/components/SectionTitle";
+import { SkeletonList } from "@/components/Skeleton";
 import { useAppState } from "@/state/AppContext";
 import { cardShadow } from "@/theme/shadows";
 import { palette } from "@/theme/palette";
 import { spacing } from "@/theme/spacing";
 
 export function UsersScreen() {
-  const { users } = useAppState();
+  const { isSyncing, users } = useAppState();
 
   return (
     <Screen>
       <SectionTitle eyebrow="Usuarios" title="Roles y accesos" />
-      {users.map((user) => (
+      {isSyncing ? <SkeletonList count={3} /> : users.map((user) => (
         <View key={user.id} style={styles.card}>
           <Text style={styles.name}>{user.name}</Text>
           <Text style={styles.meta}>{user.email}</Text>
           <Text style={styles.role}>{user.role}</Text>
         </View>
       ))}
-      {!users.length ? <Text style={styles.empty}>Inicia sesion para cargar usuarios reales.</Text> : null}
+      {!isSyncing && !users.length ? <Text style={styles.empty}>Inicia sesion para cargar usuarios reales.</Text> : null}
     </Screen>
   );
 }
