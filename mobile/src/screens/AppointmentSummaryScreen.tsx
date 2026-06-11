@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 
 import { AppointmentSuccessModal } from "@/components/AppointmentSuccessModal";
@@ -16,15 +15,7 @@ import { cardShadow, softShadow } from "@/theme/shadows";
 import { palette } from "@/theme/palette";
 import { spacing } from "@/theme/spacing";
 import { Appointment, AvailabilitySlot, DoctorOption } from "@/types";
-
-function initialsFromName(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
+import { getDoctorPhotoUri } from "@/utils/avatar";
 
 function formatDateLabel(value: string) {
   const date = new Date(value);
@@ -47,7 +38,6 @@ export function AppointmentSummaryScreen({ route, navigation }: any) {
   const [saving, setSaving] = useState(false);
   const [createdAppointment, setCreatedAppointment] = useState<Appointment | null>(null);
 
-  const initials = useMemo(() => initialsFromName(doctor?.name ?? "MD") || "MD", [doctor?.name]);
   const dateLabel = useMemo(() => formatDateLabel(slot.startsAt), [slot.startsAt]);
   const timeLabel = useMemo(() => formatTimeLabel(slot), [slot]);
   const patient = patients[0];
@@ -96,13 +86,7 @@ export function AppointmentSummaryScreen({ route, navigation }: any) {
 
         <View style={styles.heroHeader}>
           <View style={styles.avatarFrame}>
-            {doctor.profilePhotoUrl ? (
-              <Image source={{ uri: doctor.profilePhotoUrl }} style={styles.avatar} />
-            ) : (
-              <LinearGradient colors={["#eaf8ff", "#b9e8ee"]} style={styles.avatar}>
-                <Text style={styles.initials}>{initials}</Text>
-              </LinearGradient>
-            )}
+            <Image source={{ uri: getDoctorPhotoUri(doctor) }} style={styles.avatar} />
           </View>
           <View style={styles.doctorCopy}>
             <StatusPill label={specialty} tone="green" />
@@ -336,11 +320,6 @@ const styles = StyleSheet.create({
   },
   iconBadgeInline: {
     marginBottom: 0
-  },
-  initials: {
-    color: palette.primaryDeep,
-    fontSize: 22,
-    fontWeight: "900"
   },
   linkAction: {
     color: palette.primaryStrong,

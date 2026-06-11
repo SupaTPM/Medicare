@@ -377,6 +377,7 @@ export function mapAppointment(appointment: ApiAppointment, users: UserProfile[]
     doctorName: doctor?.name ?? "Doctor pendiente",
     doctorPhotoUrl: doctor?.profilePhotoUrl,
     specialty: appointment.specialty,
+    scheduledAt: appointment.scheduled_at,
     dateLabel: formatDate(appointment.scheduled_at),
     timeLabel: formatTime(appointment.scheduled_at),
     status: appointment.status,

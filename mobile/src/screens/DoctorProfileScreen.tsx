@@ -13,16 +13,8 @@ import { cardShadow } from "@/theme/shadows";
 import { palette } from "@/theme/palette";
 import { spacing } from "@/theme/spacing";
 import { groupSlotsByDay } from "@/utils/slots";
+import { getDoctorPhotoUri } from "@/utils/avatar";
 import { AvailabilitySlot, DoctorOption } from "@/types";
-
-function initialsFromName(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
 
 function MetricCard({
   icon,
@@ -201,7 +193,6 @@ export function DoctorProfileScreen({ route, navigation }: any) {
     [dayGroups, selectedDate]
   );
 
-  const initials = useMemo(() => initialsFromName(doctor?.name ?? "MD"), [doctor?.name]);
   const languageLabel = doctor?.languages?.length ? doctor.languages.join(" · ") : "Español";
   const experienceLabel = doctor?.experienceYears != null ? `${doctor.experienceYears}+` : "—";
 
@@ -245,13 +236,7 @@ export function DoctorProfileScreen({ route, navigation }: any) {
           </Pressable>
 
           <View style={styles.photoFrame}>
-            {doctor.profilePhotoUrl ? (
-              <Image source={{ uri: doctor.profilePhotoUrl }} style={styles.photo} />
-            ) : (
-              <LinearGradient colors={["#eaf8ff", "#b9e8ee"]} style={styles.initialsAvatar}>
-                <Text style={styles.initials}>{initials}</Text>
-              </LinearGradient>
-            )}
+            <Image source={{ uri: getDoctorPhotoUri(doctor) }} style={styles.photo} />
           </View>
 
           <Text style={styles.name}>{doctor.name}</Text>
@@ -563,18 +548,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     lineHeight: 20,
     marginTop: 2
-  },
-  initials: {
-    color: palette.primaryDeep,
-    fontSize: 34,
-    fontWeight: "900"
-  },
-  initialsAvatar: {
-    alignItems: "center",
-    borderRadius: 58,
-    height: 116,
-    justifyContent: "center",
-    width: 116
   },
   licensePill: {
     alignItems: "center",

@@ -107,6 +107,7 @@ export type Appointment = {
   doctorName: string;
   doctorPhotoUrl?: string;
   specialty: string;
+  scheduledAt: string;
   dateLabel: string;
   timeLabel: string;
   status: AppointmentStatus;

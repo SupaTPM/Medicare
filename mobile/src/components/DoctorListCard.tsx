@@ -1,6 +1,5 @@
 import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
@@ -9,30 +8,14 @@ import { palette } from "@/theme/palette";
 import { cardShadow } from "@/theme/shadows";
 import { spacing } from "@/theme/spacing";
 import { DoctorOption } from "@/types";
-
-function initialsFromName(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
+import { getDoctorPhotoUri } from "@/utils/avatar";
 
 export function DoctorListCard({ doctor, onPress }: { doctor: DoctorOption; onPress: () => void }) {
-  const initials = initialsFromName(doctor.name) || "MD";
-
   return (
     <Pressable onPress={onPress} style={styles.card}>
       <View style={styles.header}>
         <View style={styles.avatarFrame}>
-          {doctor.profilePhotoUrl ? (
-            <Image source={{ uri: doctor.profilePhotoUrl }} style={styles.avatar} />
-          ) : (
-            <LinearGradient colors={["#eaf8ff", "#b9e8ee"]} style={styles.avatar}>
-              <Text style={styles.initials}>{initials}</Text>
-            </LinearGradient>
-          )}
+          <Image source={{ uri: getDoctorPhotoUri(doctor) }} style={styles.avatar} />
         </View>
         <View style={styles.headerCopy}>
           <Text style={styles.name} numberOfLines={1}>
@@ -92,11 +75,6 @@ const styles = StyleSheet.create({
     height: 56,
     justifyContent: "center",
     width: 56
-  },
-  initials: {
-    color: palette.primaryDeep,
-    fontSize: 18,
-    fontWeight: "900"
   },
   headerCopy: {
     flex: 1,
