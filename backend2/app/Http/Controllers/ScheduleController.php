@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Http\Resources\DoctorProfileResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ScheduleController extends Controller
 {
@@ -33,7 +34,9 @@ class ScheduleController extends Controller
                     $query->where('specialty', $specialty);
                 }
             })
-            ->with('doctorProfile')
+            ->with(['doctorProfile', 'nextAvailableSlot'])
+            ->withAvg('reviewsReceived as rating', 'rating')
+            ->withCount('reviewsReceived as reviews_count')
             ->orderBy('name')
             ->get();
 

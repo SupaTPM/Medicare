@@ -12,8 +12,10 @@ import {
   completePatientProfileRequest,
   CompletePatientProfilePayload,
   loginWithCedulaRequest,
+  createReviewRequest,
   loadDoctorAvailability,
   loadDoctorProfile,
+  loadDoctorReviews as loadDoctorReviewsRequest,
   updateDoctorProfileRequest,
   UpdateDoctorProfilePayload,
   loadNotifications,
@@ -50,6 +52,7 @@ import {
   MedicalDocument,
   MedicalRecord,
   Patient,
+  Review,
   UserProfile,
   UserRole
 } from "@/types";
@@ -88,6 +91,8 @@ type AppState = {
   searchPatients: (query: string) => Promise<Patient[]>;
   markNotificationRead: (notificationId: string) => Promise<void>;
   updateDoctorProfile: (payload: UpdateDoctorProfilePayload) => Promise<boolean>;
+  createReview: (appointmentId: string, payload: { rating: number; comment?: string }) => Promise<boolean>;
+  loadDoctorReviews: (doctorId: string) => Promise<Review[]>;
 };
 
 type LoadingSections = {
@@ -613,6 +618,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function createReview(appointmentId: string, payload: { rating: number; comment?: string }) {
+    if (!token) {
+      setAuthError("Inicia sesion para dejar una resena.");
+      return false;
+    }
+
+    try {
+      await createReviewRequest(token, appointmentId, payload);
+      setAuthError(null);
+      return true;
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "No se pudo enviar la resena.");
+      return false;
+    }
+  }
+
+  async function loadDoctorReviews(doctorId: string) {
+    return loadDoctorReviewsRequest(token ?? null, doctorId);
+  }
+
   async function markNotificationRead(notificationId: string) {
     if (!token) {
       return;
@@ -675,7 +700,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       retryDeviceSync,
       searchPatients,
       markNotificationRead,
-      updateDoctorProfile
+      updateDoctorProfile,
+      createReview,
+      loadDoctorReviews
     }),
     [alerts, appNotifications, appointments, authError, deviceRegistration, documents, doctorProfiles, isReady, isSyncing, loadingSections, medicalRecords, patients, users, user, token]
   );

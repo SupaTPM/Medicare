@@ -143,6 +143,8 @@ export function PatientOnboardingScreen() {
   const [disabilityPercentage, setDisabilityPercentage] = useState(
     patient?.disabilityPercentage ? String(patient.disabilityPercentage) : ""
   );
+  const [insuranceProvider, setInsuranceProvider] = useState(patient?.insuranceProvider ?? "");
+  const [insuranceNumber, setInsuranceNumber] = useState(patient?.insuranceNumber ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -234,7 +236,9 @@ export function PatientOnboardingScreen() {
       chronic_conditions: chronicConditions.length ? chronicConditions : undefined,
       has_disability: hasDisability,
       disability_type: hasDisability ? disabilityType.trim() : undefined,
-      disability_percentage: hasDisability ? percentageValue : undefined
+      disability_percentage: hasDisability ? percentageValue : undefined,
+      insurance_provider: insuranceProvider.trim() || undefined,
+      insurance_number: insuranceNumber.trim() || undefined
     });
     setSaving(false);
 
@@ -306,6 +310,23 @@ export function PatientOnboardingScreen() {
 
             <Text style={styles.fieldLabel}>Enfermedades cronicas</Text>
             <TagInput items={chronicConditions} onChange={setChronicConditions} placeholder="Ej. Diabetes" />
+
+            <Text style={styles.fieldLabel}>Seguro medico</Text>
+            <TextField
+              autoCapitalize="words"
+              label=""
+              onChangeText={setInsuranceProvider}
+              placeholder="Ej. OSDE, IESS, particular"
+              value={insuranceProvider}
+            />
+
+            <Text style={styles.fieldLabel}>Numero de afiliado</Text>
+            <TextField
+              label=""
+              onChangeText={setInsuranceNumber}
+              placeholder="Ej. OS-1234567"
+              value={insuranceNumber}
+            />
           </View>
         ) : null}
 

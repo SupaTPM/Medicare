@@ -15,12 +15,18 @@ import { spacing } from "@/theme/spacing";
 
 export function AppointmentListScreen() {
   const navigation = useNavigation<any>();
-  const { appointments, loadingSections } = useAppState();
+  const { appointments, loadingSections, user } = useAppState();
+  const isPatient = user?.role === "patient";
 
   return (
     <Screen contentContainerStyle={{ gap: spacing.sm }}>
       <SectionTitle eyebrow="Agenda" title="Citas medicas" />
-      <PrimaryButton icon="add-circle-outline" label="Crear cita" onPress={() => navigation.navigate("CreateAppointment")} style={{ marginBottom: spacing.xs }} />
+      <PrimaryButton
+        icon="add-circle-outline"
+        label="Crear cita"
+        onPress={() => navigation.navigate(isPatient ? "SelectSpecialtyDoctor" : "CreateAppointment")}
+        style={{ marginBottom: spacing.xs }}
+      />
       {loadingSections.appointments ? <SkeletonList count={4} /> : appointments.map((item) => (
         <AppointmentCard item={item} key={item.id} onPress={() => navigation.navigate("AppointmentDetail", { appointmentId: item.id })} />
       ))}

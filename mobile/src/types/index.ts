@@ -40,6 +40,12 @@ export type DoctorOption = UserProfile & {
   experienceYears?: number;
   languages: string[];
   profilePhotoUrl?: string;
+  rating?: number | null;
+  reviewsCount?: number;
+  location?: string | null;
+  consultationPrice?: number | null;
+  nextSlotLabel?: string | null;
+  nextSlotStartsAt?: string | null;
 };
 
 export type AvailabilitySlot = {
@@ -90,6 +96,8 @@ export type Patient = {
   lastVisit: string;
   nextSpecialty?: string;
   profileCompleted: boolean;
+  insuranceProvider?: string | null;
+  insuranceNumber?: string | null;
 };
 
 export type Appointment = {
@@ -130,6 +138,14 @@ export type AlertItem = {
   tone: "warning" | "danger" | "info";
   title: string;
   body: string;
+};
+
+export type Review = {
+  id: string;
+  patientName: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
 };
 
 export type AppNotification = {

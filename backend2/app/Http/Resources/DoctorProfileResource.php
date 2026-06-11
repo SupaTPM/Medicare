@@ -17,6 +17,14 @@ class DoctorProfileResource extends JsonResource
             'email' => $this->email,
             'role' => $this->role,
             'profile_completed' => $profile ? $this->isProfileComplete($profile) : false,
+            'rating' => $this->rating !== null ? round((float) $this->rating, 1) : null,
+            'reviews_count' => (int) ($this->reviews_count ?? 0),
+            'next_slot' => $this->relationLoaded('nextAvailableSlot') && $this->nextAvailableSlot
+                ? [
+                    'starts_at' => $this->nextAvailableSlot->starts_at?->toIso8601String(),
+                    'label' => $this->nextAvailableSlot->starts_at?->translatedFormat('D, j M H:i'),
+                ]
+                : null,
             'doctor_profile' => $profile ? [
                 'cedula' => $profile->cedula,
                 'specialty' => $profile->specialty,
@@ -27,6 +35,8 @@ class DoctorProfileResource extends JsonResource
                 'education' => $profile->education,
                 'experience_years' => $profile->experience_years,
                 'languages' => $profile->languages ?? [],
+                'location' => $profile->location,
+                'consultation_price' => $profile->consultation_price !== null ? (float) $profile->consultation_price : null,
             ] : null,
         ];
     }

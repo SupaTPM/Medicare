@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { AIAssistantScreen } from "@/screens/AIAssistantScreen";
 import { AppointmentDetailScreen } from "@/screens/AppointmentDetailScreen";
 import { AppointmentListScreen } from "@/screens/AppointmentListScreen";
+import { AppointmentSummaryScreen } from "@/screens/AppointmentSummaryScreen";
 import { CedulaAccessScreen } from "@/screens/CedulaAccessScreen";
 import { CreateAppointmentScreen } from "@/screens/CreateAppointmentScreen";
 import { CreateMedicalRecordScreen } from "@/screens/CreateMedicalRecordScreen";
@@ -28,6 +29,7 @@ import { PatientAccessScreen } from "@/screens/PatientAccessScreen";
 import { QRScannerScreen } from "@/screens/QRScannerScreen";
 import { QRScreen } from "@/screens/QRScreen";
 import { ReportsScreen } from "@/screens/ReportsScreen";
+import { SelectSpecialtyDoctorScreen } from "@/screens/SelectSpecialtyDoctorScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
 import { UsersScreen } from "@/screens/UsersScreen";
 import { useAppState } from "@/state/AppContext";
@@ -205,6 +207,8 @@ export function AppNavigator() {
           <Stack.Screen name="Main">{() => <RoleTabs role={user.role} />}</Stack.Screen>
           <Stack.Screen component={AppointmentDetailScreen} name="AppointmentDetail" />
           <Stack.Screen component={CreateAppointmentScreen} name="CreateAppointment" />
+          <Stack.Screen component={SelectSpecialtyDoctorScreen} name="SelectSpecialtyDoctor" />
+          <Stack.Screen component={AppointmentSummaryScreen} name="AppointmentSummary" />
           <Stack.Screen component={CreateMedicalRecordScreen} name="CreateMedicalRecord" />
           <Stack.Screen component={CreatePatientScreen} name="CreatePatient" />
           <Stack.Screen component={DoctorProfileScreen} name="DoctorProfile" />

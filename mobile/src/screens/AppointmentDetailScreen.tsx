@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
+import { ReviewModal } from "@/components/ReviewModal";
 import { Screen } from "@/components/Screen";
 import { SectionTitle } from "@/components/SectionTitle";
 import { StatusPill } from "@/components/StatusPill";
@@ -42,10 +43,25 @@ function DetailItem({
 }
 
 export function AppointmentDetailScreen({ route, navigation }: any) {
-  const { appointments, user } = useAppState();
+  const { appointments, createReview, user } = useAppState();
   const appointment = appointments.find((item) => item.id === route.params?.appointmentId) ?? appointments[0];
   const canRegisterAttention = user?.role === "doctor";
+  const canReview = user?.role === "patient" && appointment.status === "completed";
   const tone = appointment.status === "confirmed" ? "green" : appointment.status === "completed" ? "blue" : appointment.status === "cancelled" ? "red" : "yellow";
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
+  async function handleSubmitReview(rating: number, comment?: string) {
+    setReviewSaving(true);
+    const success = await createReview(appointment.id, { rating, comment });
+    setReviewSaving(false);
+
+    if (success) {
+      setReviewSubmitted(true);
+      setReviewModalVisible(false);
+    }
+  }
 
   return (
     <Screen contentContainerStyle={{ gap: spacing.md }}>
@@ -104,6 +120,26 @@ export function AppointmentDetailScreen({ route, navigation }: any) {
       {canRegisterAttention ? (
         <PrimaryButton icon="medkit-outline" label="Registrar atencion" onPress={() => navigation.navigate("CreateMedicalRecord", { appointmentId: appointment.id })} />
       ) : null}
+
+      {canReview ? (
+        reviewSubmitted ? (
+          <StatusPill label="Calificado" tone="green" />
+        ) : (
+          <PrimaryButton
+            icon="star-outline"
+            label="Calificar al doctor"
+            onPress={() => setReviewModalVisible(true)}
+            variant="ghost"
+          />
+        )
+      ) : null}
+
+      <ReviewModal
+        loading={reviewSaving}
+        onClose={() => setReviewModalVisible(false)}
+        onSubmit={handleSubmitReview}
+        visible={reviewModalVisible}
+      />
     </Screen>
   );
 }

@@ -30,6 +30,8 @@ class Patient extends Model
         'disability_type',
         'disability_percentage',
         'insurance_name',
+        'insurance_provider',
+        'insurance_number',
         'profile_completed_at',
     ];
 

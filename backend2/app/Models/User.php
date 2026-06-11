@@ -53,4 +53,17 @@ class User extends Authenticatable
     {
         return $this->hasMany(AppNotification::class);
     }
+
+    public function reviewsReceived(): HasMany
+    {
+        return $this->hasMany(Review::class, 'doctor_id');
+    }
+
+    public function nextAvailableSlot(): HasOne
+    {
+        return $this->hasOne(DoctorAvailabilitySlot::class, 'doctor_id')
+            ->where('status', 'available')
+            ->where('starts_at', '>=', now())
+            ->orderBy('starts_at');
+    }
 }

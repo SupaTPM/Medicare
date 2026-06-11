@@ -9,6 +9,7 @@ import {
   MedicalDocument,
   MedicalRecord,
   Patient,
+  Review,
   UserProfile,
   UserRole
 } from "@/types";
@@ -23,6 +24,12 @@ type ApiUser = {
   email: string;
   role: UserRole;
   profile_completed?: boolean;
+  rating?: number | null;
+  reviews_count?: number | null;
+  next_slot?: {
+    starts_at: string;
+    label: string;
+  } | null;
   doctor_profile?: {
     cedula?: string | null;
     specialty: string;
@@ -33,6 +40,8 @@ type ApiUser = {
     education?: string | null;
     experience_years?: number | null;
     languages?: string[] | null;
+    location?: string | null;
+    consultation_price?: number | null;
   } | null;
 };
 
@@ -51,6 +60,8 @@ type ApiPatient = {
   disability_type?: string | null;
   disability_percentage?: number | null;
   profile_completed_at?: string | null;
+  insurance_provider?: string | null;
+  insurance_number?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -100,6 +111,18 @@ type ApiMedicalDocument = {
   uploaded_by?: number;
 };
 
+type ApiReview = {
+  id: number;
+  doctor_id?: number;
+  patient_id?: number;
+  appointment_id?: number;
+  patient_name?: string;
+  rating: number;
+  comment?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 type ApiNotification = {
   id: number;
   appointment_id?: number | null;
@@ -143,6 +166,8 @@ export type CompletePatientProfilePayload = {
   has_disability: boolean;
   disability_type?: string;
   disability_percentage?: number;
+  insurance_provider?: string;
+  insurance_number?: string;
 };
 
 export type CreateAppointmentPayload = {
@@ -294,7 +319,13 @@ function mapDoctor(user: ApiUser): DoctorOption {
     education: user.doctor_profile?.education ?? undefined,
     experienceYears: user.doctor_profile?.experience_years ?? undefined,
     languages: user.doctor_profile?.languages ?? [],
-    profilePhotoUrl: normalizeMediaUrl(user.doctor_profile?.profile_photo_url)
+    profilePhotoUrl: normalizeMediaUrl(user.doctor_profile?.profile_photo_url),
+    rating: user.rating ?? null,
+    reviewsCount: user.reviews_count ?? 0,
+    location: user.doctor_profile?.location ?? null,
+    consultationPrice: user.doctor_profile?.consultation_price ?? null,
+    nextSlotLabel: user.next_slot?.label ?? null,
+    nextSlotStartsAt: user.next_slot?.starts_at ?? null
   };
 }
 
@@ -330,7 +361,9 @@ export function mapPatient(patient: ApiPatient): Patient {
     disabilityPercentage: patient.disability_percentage ?? undefined,
     lastVisit: formatDate(patient.updated_at ?? patient.created_at),
     nextSpecialty: undefined,
-    profileCompleted: Boolean(patient.profile_completed_at)
+    profileCompleted: Boolean(patient.profile_completed_at),
+    insuranceProvider: patient.insurance_provider ?? undefined,
+    insuranceNumber: patient.insurance_number ?? undefined
   };
 }
 
@@ -379,6 +412,16 @@ export function mapMedicalDocument(document: ApiMedicalDocument): MedicalDocumen
     type: document.document_type,
     dateLabel: formatDate(document.uploaded_at),
     uploadedBy: document.uploaded_by ? `Usuario #${document.uploaded_by}` : "No registrado"
+  };
+}
+
+function mapReview(review: ApiReview): Review {
+  return {
+    id: String(review.id),
+    patientName: review.patient_name ?? "Paciente",
+    rating: review.rating,
+    comment: review.comment ?? null,
+    createdAt: review.created_at ?? new Date().toISOString()
   };
 }
 
@@ -524,6 +567,28 @@ export async function loadDoctorAvailability(token: string, doctorId: string) {
     token ? { token } : {}
   );
   return slots.map(mapAvailabilitySlot);
+}
+
+export async function loadDoctorReviews(token: string | null, doctorId: string | number) {
+  const response = await apiRequest<Paginated<ApiReview>>(
+    `/schedule/doctors/${doctorId}/reviews`,
+    token ? { token } : {}
+  );
+  return response.data.map(mapReview);
+}
+
+export async function createReviewRequest(
+  token: string,
+  appointmentId: string | number,
+  payload: { rating: number; comment?: string }
+) {
+  const review = await apiRequest<ApiReview>(`/appointments/${appointmentId}/review`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload)
+  });
+
+  return mapReview(review);
 }
 
 export async function loadPatients(token: string) {

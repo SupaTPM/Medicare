@@ -9,6 +9,7 @@ use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\MedicalRecordController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PatientController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +23,7 @@ Route::get('/schedule/specialties', [ScheduleController::class, 'specialties']);
 Route::get('/schedule/doctors', [ScheduleController::class, 'doctors']);
 Route::get('/schedule/doctors/{doctor}/profile', [DoctorProfileController::class, 'show']);
 Route::get('/schedule/doctors/{doctor}/availability', [ScheduleController::class, 'availability']);
+Route::get('/schedule/doctors/{doctor}/reviews', [ReviewController::class, 'indexForDoctor']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -50,6 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus']);
     Route::post('/appointments/{appointment}/generate-qr', [AppointmentController::class, 'generateQr']);
     Route::post('/appointments/scan-qr', [AppointmentController::class, 'scanQr']);
+    Route::post('/appointments/{appointment}/review', [ReviewController::class, 'store']);
 
     Route::post('/medical-records', [MedicalRecordController::class, 'store']);
     Route::post('/documents', [DocumentController::class, 'store']);

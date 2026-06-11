@@ -141,6 +141,8 @@ class PatientController extends Controller
             'has_disability' => ['required', 'boolean'],
             'disability_type' => ['nullable', 'required_if:has_disability,true', 'string', 'max:255'],
             'disability_percentage' => ['nullable', 'required_if:has_disability,true', 'integer', 'min:1', 'max:100'],
+            'insurance_provider' => ['nullable', 'string', 'max:255'],
+            'insurance_number' => ['nullable', 'string', 'max:255'],
         ]);
 
         if (empty($data['has_disability'])) {

@@ -22,6 +22,8 @@ class DoctorProfile extends Model
         'education',
         'experience_years',
         'languages',
+        'location',
+        'consultation_price',
     ];
 
     protected $appends = [
@@ -31,6 +33,7 @@ class DoctorProfile extends Model
     protected $casts = [
         'experience_years' => 'integer',
         'languages' => 'array',
+        'consultation_price' => 'decimal:2',
     ];
 
     public function user(): BelongsTo

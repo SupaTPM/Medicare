@@ -14,7 +14,11 @@ class DoctorProfileController extends Controller
     {
         abort_unless($doctor->role === 'doctor', 404);
 
-        return response()->json((new DoctorProfileResource($doctor->load('doctorProfile')))->resolve());
+        $doctor->load('doctorProfile')
+            ->loadAvg('reviewsReceived as rating', 'rating')
+            ->loadCount('reviewsReceived as reviews_count');
+
+        return response()->json((new DoctorProfileResource($doctor))->resolve());
     }
 
     public function update(Request $request, User $doctor): JsonResponse
@@ -33,6 +37,8 @@ class DoctorProfileController extends Controller
             'experience_years' => [$isDoctorSelfOnboarding ? 'required' : 'nullable', 'integer', 'min:0', 'max:80'],
             'languages' => [$isDoctorSelfOnboarding ? 'required' : 'nullable', 'array', 'min:1'],
             'languages.*' => ['string', 'max:40'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'consultation_price' => ['nullable', 'numeric', 'min:0', 'max:99999.99'],
             'profile_photo' => [
                 $isDoctorSelfOnboarding && ! $doctor->doctorProfile?->profile_photo_path ? 'required' : 'nullable',
                 'image',
@@ -61,7 +67,11 @@ class DoctorProfileController extends Controller
         $user = $request->user();
         abort_unless($user?->role === 'doctor', 403, 'Solo doctores tienen perfil medico.');
 
-        return response()->json((new DoctorProfileResource($user->load('doctorProfile')))->resolve());
+        $user->load('doctorProfile')
+            ->loadAvg('reviewsReceived as rating', 'rating')
+            ->loadCount('reviewsReceived as reviews_count');
+
+        return response()->json((new DoctorProfileResource($user))->resolve());
     }
 
     private function authorizeProfileUpdate(?User $user, User $doctor): void
